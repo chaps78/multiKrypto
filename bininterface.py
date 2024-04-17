@@ -26,6 +26,21 @@ class binAcces():
         self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens)
         return response["orderId"]
     
+    ###############################
+    #donner l ID du dernier FILLED (clos)
+    ###############################
+    def new_achat(self,symbol,ID_ecart):
+        bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
+        self.new_limite_order(symbol,bet_ecart[3],bet_ecart[2],Client.SIDE_BUY)
+
+    ###############################
+    #donner l ID du dernier FILLED (clos)
+    ###############################
+    def new_vente(self,symbol,ID_ecart):
+        bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
+        bet_ecart_montant = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)
+        self.new_limite_order(symbol,bet_ecart_montant[3],bet_ecart_limite[2],Client.SIDE_SELL)
+
     def new_market_order(self,symbol,montant,sens):
         try:
             response = self.client.create_order(symbol=symbol, 
@@ -51,9 +66,12 @@ class binAcces():
         retour = [ordre["status"],ordre["executedQty"]]
         return retour
     
+    #######################################
+    #  Regarde les differences entre des ordres donnes et ce qu il y a sur binance
+    #######################################
     def changement_status(self,symbol):
         try:
-            ordres_DB = self.sql.get_orders_status_filter(self.client.ORDER_STATUS_NEW)
+            ordres_DB = self.sql.get_orders_status_symbol_filter(self.client.ORDER_STATUS_NEW,symbol)
 
             orders_Binance = self.client.get_all_orders(symbol=symbol)
             change = []
@@ -66,6 +84,9 @@ class binAcces():
             self.sql.new_log("changement_status_Binance",str(inst))
         return change
     
+    ####################################
+    #Met a jour la DB a partir d une liste en input
+    ####################################
     def changement_update(self,liste_ordres):
         try:
             for ordre in liste_ordres:
@@ -88,26 +109,35 @@ class binAcces():
             self.sql.new_log("get_found_Binance",str(inst))
             retour = ["ERROR"]
         return retour
-    ##############    TODO   ####################
+    
+    
     def get_price(self,symbol):
-        result = self.client..ticker_price("XRPEUR")
+        try:
+            result = self.client.get_symbol_ticker(symbol=symbol)
+        except Exception as inst:
+            self.sql.new_log("get_price_Binance",str(inst))
+            return "ERROR"
         return result
 
-    
-bin = binAcces()
+def main():    
+    bin = binAcces()
 
-#bin.new_limite_order("XRPEUR",40,0.3,"BUY")
-#bin.close_order("646164940")
-#exec = bin.new_limite_order("XRPEUR",19,0.3,"BUY")
-#print("exec : "+str(exec))
-#exec = bin.new_limite_order("XRPEUR",20,0.3,"BUY")
-#print("exec : "+str(exec))
-#exec = bin.new_limite_order("XRPEUR",21,0.3,"BUY")
-#print("exec : "+str(exec))
-#breakpoint()
-#retour = bin.changement_status("XRPEUR")
-#print(retour)
-#bin.changement_update(retour)
-found = bin.get_price("DOGEBTC")
+    #bin.new_limite_order("XRPEUR",40,0.3,"BUY")
+    #bin.close_order("646164940")
+    #exec = bin.new_limite_order("XRPEUR",19,0.3,"BUY")
+    #print("exec : "+str(exec))
+    #exec = bin.new_limite_order("XRPEUR",20,0.3,"BUY")
+    #print("exec : "+str(exec))
+    #exec = bin.new_limite_order("XRPEUR",21,0.3,"BUY")
+    #print("exec : "+str(exec))
+    #breakpoint()
+    #retour = bin.changement_status("XRPEUR")
+    #print(retour)
+    #bin.changement_update(retour)
+    #found = bin.get_price("DOGEBTC")
 
-print(found)
+    #print(found)
+
+
+if __name__ == '__main__':
+     main()
