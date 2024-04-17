@@ -8,10 +8,10 @@ class sqlAcces():
         self.cur = self.con.cursor()
 
 
-    def new_order(self,ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart):
+    def new_order(self,ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,niveau=1):
         try:
-            self.cur.execute("INSERT INTO Ordres VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                             (ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart))
+            self.cur.execute("INSERT INTO Ordres VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                             (ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,int(niveau)))
         except sqlite3.IntegrityError as inst:
             self.new_log("new_order_SQL",str(inst))
             return inst
@@ -110,7 +110,7 @@ class sqlAcces():
         except sqlite3.IntegrityError as inst:
             self.new_log("get_last_close_SQL",str(inst))
             return ""
-        if res.fetchall()[0] == (None, None, None, None, None, None, None, None, None, None, None, None):
+        if res.fetchall()[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None):
             return ""
         return res.fetchall()[0]
     

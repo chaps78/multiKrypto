@@ -11,19 +11,19 @@ class binAcces():
         self.client = Client(config["api"], config["secret"])
         self.sql = sqlAcces()
 
-    def new_limite_order(self,symbol,montant,limite,sens):
+    def new_limite_order(self,symbol,montant,limite,sens,ID_ecart):
         try:
             response = self.client.create_order(symbol=symbol, 
                                             side=sens, 
                                             type=Client.ORDER_TYPE_LIMIT, 
                                             quantity=montant, 
-                                            price=limite,
+                                            price='%.8f' % limite,
                                             timeInForce='GTC')
         except Exception as inst:
             self.sql.new_log("new_limite_order_Binance",str(inst))
             return ""
         
-        self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens)
+        self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart)
         return response["orderId"]
     
     ###############################
@@ -31,7 +31,7 @@ class binAcces():
     ###############################
     def new_achat(self,symbol,ID_ecart):
         bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
-        self.new_limite_order(symbol,bet_ecart[3],bet_ecart[2],Client.SIDE_BUY)
+        self.new_limite_order(symbol,bet_ecart[3],bet_ecart[2],Client.SIDE_BUY,ID_ecart-1)
 
     ###############################
     #donner l ID du dernier FILLED (clos)
@@ -39,7 +39,7 @@ class binAcces():
     def new_vente(self,symbol,ID_ecart):
         bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
         bet_ecart_montant = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)
-        self.new_limite_order(symbol,bet_ecart_montant[3],bet_ecart_limite[2],Client.SIDE_SELL)
+        self.new_limite_order(symbol,bet_ecart_montant[3],bet_ecart_limite[2],Client.SIDE_SELL,ID_ecart+1)
 
     def new_market_order(self,symbol,montant,sens):
         try:

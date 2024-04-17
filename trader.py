@@ -20,6 +20,31 @@ class Basics():
                 prix_proche_ID = ecart_bet[0]
         return prix_proche_ID
     
+    def initialise(self,symbol):
+        GO = False
+        ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
+        if len(ordres_ouverts) == 2:
+            changement = self.bin.changement_status(symbol)
+            if changement == []:
+                GO = True
+            else:
+                self.bin.changement_update(changement)
+        print("GO : "+str(GO))
+        if GO == False:
+            changement = self.bin.changement_status(symbol)
+            self.bin.changement_update(changement)
+            ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
+            for ordre_ouvert in ordres_ouverts:
+                self.bin.close_order(ordre_ouvert[0])
+            last_close = self.sql.get_last_close(symbol)
+            if last_close != "":
+                ID_ecart_last_close = last_close[10]
+            else:
+                ID_ecart_last_close = self.plus_proche(symbol)
+            print(ID_ecart_last_close)
+            self.bin.new_achat(symbol,ID_ecart_last_close)
+            self.bin.new_vente(symbol,ID_ecart_last_close)
+    
 ###########################################################################
 #                                 MAIN                                    #
 ###########################################################################
@@ -30,16 +55,7 @@ def main():
     ################################################
     #    Initialisation
     ################################################
-    GO = False
-    ordres_ouverts = basic.sql.get_orders_status_symbol_filter(basic.bin.client.ORDER_STATUS_NEW,DEVISE)
-    if len(ordres_ouverts) == 2:
-        changement = basic.bin.changement_status
-        if changement == []:
-            GO = True
-    
-    if GO == False:
-        for ordre_ouver in ordres_ouverts:
-            basic.bin.close_order(ordre_ouver[0])
+    basic.initialise(DEVISE)
     
 
 
