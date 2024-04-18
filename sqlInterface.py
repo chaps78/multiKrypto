@@ -48,7 +48,20 @@ class sqlAcces():
             self.new_log("get_orders_status_filter_SQL",str(inst))
             return inst
         self.con.commit()
-        return res.fetchall()
+        ordres = []
+        for ordre in res.fetchall():
+            ordres.append(self.convert_fetch_to_dico(ordre))
+        return ordres
+    
+
+    def get_time_since_open(self,symbol):
+        ordres_ouverts = self.get_orders_status_symbol_filter("NEW",symbol)
+        retour = {}
+        for ordre_ouvert in ordres_ouverts:
+            retour[ordre_ouvert["ID"]] = {"time":((datetime.now(timezone.utc)-datetime.fromisoformat(ordre_ouvert["date_debut"]))),
+                                          "niveau":ordre_ouvert["niveau"]}
+        return retour
+            
     
 
     def get_order_info_by_ID(self,ID):
@@ -104,15 +117,33 @@ class sqlAcces():
         ###############
         return res.fetchall()[0]
     
-    def get_last_close(self,symbol):
+    def get_last_filled(self,symbol):
         try:
             res = self.cur.execute("SELECT *, MAX(date_fin) FROM Ordres WHERE status='FILLED' AND symbol='"+str(symbol)+"'")
         except sqlite3.IntegrityError as inst:
-            self.new_log("get_last_close_SQL",str(inst))
+            self.new_log("get_last_filled_SQL",str(inst))
             return ""
-        if res.fetchall()[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None):
+        ordres = res.fetchall()
+        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None):
             return ""
-        return res.fetchall()[0]
+        ordre = self.convert_fetch_to_dico(ordres[0])
+        return ordre
+    
+    def convert_fetch_to_dico(self,ordre):
+        ordre_dico = {"ID":ordre[0],
+                      "symbol":ordre[1],
+                      "montant":ordre[2],
+                      "limite":ordre[3],
+                      "status":ordre[4],
+                      "date_debut":ordre[5],
+                      "date_fin":ordre[6],
+                      "montant_execute":ordre[7],
+                      "type":ordre[8],
+                      "sens":ordre[9],
+                      "ID_ecart":ordre[10],
+                      "niveau":ordre[11],
+                 }
+        return ordre_dico
     
 def main():
     sql = sqlAcces()

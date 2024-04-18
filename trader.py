@@ -1,3 +1,5 @@
+import time
+
 from bininterface import binAcces
 from sqlInterface import sqlAcces
 
@@ -25,6 +27,7 @@ class Basics():
         ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
         if len(ordres_ouverts) == 2:
             changement = self.bin.changement_status(symbol)
+            print("changement : "+ str(changement))
             if changement == []:
                 GO = True
             else:
@@ -35,10 +38,10 @@ class Basics():
             self.bin.changement_update(changement)
             ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
             for ordre_ouvert in ordres_ouverts:
-                self.bin.close_order(ordre_ouvert[0])
-            last_close = self.sql.get_last_close(symbol)
+                self.bin.cancel_order(ordre_ouvert["ID"])
+            last_close = self.sql.get_last_filled(symbol)
             if last_close != "":
-                ID_ecart_last_close = last_close[10]
+                ID_ecart_last_close = last_close["ID_ecart"]
             else:
                 ID_ecart_last_close = self.plus_proche(symbol)
             print(ID_ecart_last_close)
@@ -56,8 +59,18 @@ def main():
     #    Initialisation
     ################################################
     basic.initialise(DEVISE)
-    
-
+    while True:
+        time.sleep(5)
+        basic.sql.get_time_since_open(DEVISE)
+        changement = basic.bin.changement_status(DEVISE)
+        if changement != []:
+            basic.bin.changement_update(changement)
+            ordres_ouverts = basic.sql.get_orders_status_symbol_filter(basic.bin.client.ORDER_STATUS_NEW,DEVISE)
+            for odb in ordres_ouverts:
+                    basic.bin.cancel_order(odb["ID"])
+            last_filled_order = basic.sql.get_last_filled(DEVISE)
+            basic.bin.new_achat(DEVISE,last_filled_order["ID_ecart"])
+            basic.bin.new_vente(DEVISE,last_filled_order["ID_ecart"])
 
 
 
