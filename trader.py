@@ -11,15 +11,16 @@ class Basics():
         self.bin = binAcces()
 
     def plus_proche(self,symbol):
-        ecart_bet_tab = self.sql.get_ecart_bet_from_symbol(symbol)
+        ecart_bet_dic = self.sql.get_ecart_bet_from_symbol(symbol)
         prix_tmp = self.bin.get_price(symbol)
         prix = prix_tmp["price"]
-        delta = abs(float(ecart_bet_tab[0][2])-float(prix))
+        delta = abs(float(ecart_bet_dic[0][1])-float(prix))
         prix_proche_ID=0
-        for ecart_bet in ecart_bet_tab:
-            if abs(float(prix)-float(ecart_bet[2]))<delta:
-                delta = abs(float(prix)-float(ecart_bet[2]))
-                prix_proche_ID = ecart_bet[0]
+        keys = ecart_bet_dic.keys()
+        for key in keys:
+            if abs(float(prix)-float(ecart_bet_dic[key][1]))<delta:
+                delta = abs(float(prix)-float(ecart_bet_dic[key][1]))
+                prix_proche_ID = key
         return prix_proche_ID
     
     def initialise(self,symbol):
@@ -47,13 +48,35 @@ class Basics():
             print(ID_ecart_last_close)
             self.bin.new_achat(symbol,ID_ecart_last_close)
             self.bin.new_vente(symbol,ID_ecart_last_close)
+
+    def verification_2_ordres(self,symbol):
+        changement = self.bin.changement_status(symbol)
+        if changement != []:
+            self.bin.changement_update(changement)
+            ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
+            for odb in ordres_ouverts:
+                    self.bin.cancel_order(odb["ID"])
+            last_filled_order = self.sql.get_last_filled(symbol)
+            self.bin.new_achat(symbol,last_filled_order["ID_ecart"])
+            self.bin.new_vente(symbol,last_filled_order["ID_ecart"])
+
+    def verification_niveau_VS_timer(self,symbol):
+        niveaux = self.sql.get_time_since_open(symbol)
+        keys = niveaux.keys()
+        for key in keys:
+            #Delais d attente de 30 min pour un ordre niveau 4
+            if int(niveaux[key]["niveau"]) == 4 and niveaux[key]["time"].seconds > 1800:
+                self.bin.baisser_niveau_ordre(niveaux[key]["ID"])
+            # Delas d attente de 3 heures pour un ordre de niveau 3
+            if int(niveaux[key]["niveau"]) == 3 and niveaux[key]["time"].seconds > 10800:
+                self.bin.baisser_niveau_ordre(niveaux[key]["ID"])
     
 ###########################################################################
 #                                 MAIN                                    #
 ###########################################################################
 def main():
-    DEVISE="DOGEBTC"
     basic = Basics()
+    DEVISE=basic.sql.get_symbols()[0]
 
     ################################################
     #    Initialisation
@@ -61,16 +84,11 @@ def main():
     basic.initialise(DEVISE)
     while True:
         time.sleep(5)
-        basic.sql.get_time_since_open(DEVISE)
-        changement = basic.bin.changement_status(DEVISE)
-        if changement != []:
-            basic.bin.changement_update(changement)
-            ordres_ouverts = basic.sql.get_orders_status_symbol_filter(basic.bin.client.ORDER_STATUS_NEW,DEVISE)
-            for odb in ordres_ouverts:
-                    basic.bin.cancel_order(odb["ID"])
-            last_filled_order = basic.sql.get_last_filled(DEVISE)
-            basic.bin.new_achat(DEVISE,last_filled_order["ID_ecart"])
-            basic.bin.new_vente(DEVISE,last_filled_order["ID_ecart"])
+        basic.verification_2_ordres(DEVISE)
+
+        basic.verification_niveau_VS_timer(DEVISE)
+
+
 
 
 

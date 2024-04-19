@@ -48,7 +48,7 @@ class binAcces():
                                       ID_ecart-1,
                                       2)
             
-            if int(last_ordre["niveau"])==2:
+            elif int(last_ordre["niveau"])==2:
                 bet_ecart_1 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
                 bet_ecart_2 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-2)
                 self.new_limite_order(symbol,
@@ -95,7 +95,7 @@ class binAcces():
                                       SIDE_SELL,
                                       ID_ecart+1,
                                       2)
-            if int(last_ordre["niveau"])==2:
+            elif int(last_ordre["niveau"])==2:
                 bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+2)
                 bet_ecart_montant = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)
                 bet_ecart_montant_2 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
@@ -134,7 +134,7 @@ class binAcces():
 
     def cancel_order(self,ID):
         try:
-            symbol = self.sql.get_order_info_by_ID(ID)[0][1]
+            symbol = self.sql.get_order_info_by_ID(ID)["symbol"]
             ordre = self.client.cancel_order(symbol=symbol,orderId=int(ID))
         except Exception as inst:
             self.sql.new_log("cancel_order_Binance",str(inst))
@@ -195,6 +195,58 @@ class binAcces():
             self.sql.new_log("get_price_Binance",str(inst))
             return "ERROR"
         return result
+    
+    def baisser_niveau_ordre(self,ID_ordre):
+        ordre = self.sql.get_order_info_by_ID(ID_ordre)
+        if ordre["sens"] == self.client.SIDE_BUY:
+            self.baisse_niveau_achat(self,ordre)
+        if ordre["sens"] == self.client.SIDE_SELL:
+            self.baisse_niveau_vente(self,ordre)
+    
+    def baisse_niveau_achat(self,ordre):
+        if ordre["niveau"] == 4:
+            self.cancel_order(ordre["ID"])
+            bet_ecart_1 = self.sql.get_ecart_bet_from_symbol_and_ID(ordre["symbol"],int(ordre["ID_ecart"])+1)
+            bet_ecart_2 = self.sql.get_ecart_bet_from_symbol_and_ID(ordre["symbol"],int(ordre["ID_ecart"])+2)
+            self.new_limite_order(ordre["symbol"],
+                                  float(bet_ecart_1[3])+float(bet_ecart_2[3]),
+                                  float(bet_ecart_1[2]),
+                                  ordre["sens"],
+                                  int(ordre["ID_ecart"])+1,
+                                  3)
+        elif ordre["niveau"] == 3:
+            self.cancel_order(ordre["ID"])
+            bet_ecart_1 = self.sql.get_ecart_bet_from_symbol_and_ID(ordre["symbol"],int(ordre["ID_ecart"])+1)
+            self.new_limite_order(ordre["symbol"],
+                                  float(bet_ecart_1[3]),
+                                  float(bet_ecart_1[2]),
+                                  ordre["sens"],
+                                  int(ordre["ID_ecart"])+1,
+                                  2)
+
+    def baisse_niveau_vente(self,ordre):
+        if ordre["niveau"] == 4:
+            self.cancel_order(ordre["ID"])
+            bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(ordre["symbol"],int(ordre["ID_ecart"])-1)
+            bet_ecart_montant = self.sql.get_ecart_bet_from_symbol_and_ID(ordre["symbol"],int(ordre["ID_ecart"])-3)
+            bet_ecart_montant_2 = self.sql.get_ecart_bet_from_symbol_and_ID(ordre["symbol"],int(ordre["ID_ecart"])-2)
+            self.new_limite_order(ordre["symbol"],
+                                      bet_ecart_montant[3]+bet_ecart_montant_2[3],
+                                      bet_ecart_limite[2],
+                                      ordre["sens"],
+                                      int(ordre["ID_ecart"])-1,
+                                      3)
+        elif ordre["niveau"] == 3:
+            self.cancel_order(ordre["ID"])
+            bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(ordre["symbol"],int(ordre["ID_ecart"])-1)
+            bet_ecart_montant = self.sql.get_ecart_bet_from_symbol_and_ID(ordre["symbol"],int(ordre["ID_ecart"])-2)
+            self.new_limite_order(ordre["symbol"],
+                                      bet_ecart_montant[3],
+                                      bet_ecart_limite[2],
+                                      ordre["sens"],
+                                      int(ordre["ID_ecart"])-1,
+                                      2)
+
 
 def main():    
     bin = binAcces()

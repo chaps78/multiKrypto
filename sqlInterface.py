@@ -71,7 +71,9 @@ class sqlAcces():
             self.new_log("get_order_info_by_ID_SQL",str(inst))
             return inst
         self.con.commit()
-        return res.fetchall()
+        ordre_sql = res.fetchall()
+        ordre_format = self.convert_fetch_to_dico(ordre_sql[0])
+        return ordre_format
     
 
     def new_log(self,emplacement,message):
@@ -103,7 +105,11 @@ class sqlAcces():
             self.new_log("get_ecart_bet_from_symbol_SQL",str(inst))
             return inst
         self.con.commit()
-        return res.fetchall()
+        ecarts_SQL = res.fetchall()
+        ecart_dico = {}
+        for ecart_SQL in ecarts_SQL:
+            ecart_dico[int(ecart_SQL[0])]=[ecart_SQL[2],ecart_SQL[3]]
+        return ecart_dico
     
     def get_ecart_bet_from_symbol_and_ID(self,symbol,ID):
         try:
@@ -123,6 +129,7 @@ class sqlAcces():
         except sqlite3.IntegrityError as inst:
             self.new_log("get_last_filled_SQL",str(inst))
             return ""
+        self.con.commit()
         ordres = res.fetchall()
         if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None):
             return ""
@@ -145,6 +152,33 @@ class sqlAcces():
                  }
         return ordre_dico
     
+    def get_symbols(self):
+        try:
+            res = self.cur.execute("SELECT * FROM Devises")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log("get_symbols_SQL",str(inst))
+            return inst
+        devises_SQL = res.fetchall()
+
+        devises_ret=[]
+        for devise_SQL in devises_SQL:
+            devises_ret.append(devise_SQL[0])
+        return devises_ret
+    
+    def get_devises_from_symbol(self,symbol):
+        try:
+            res = self.cur.execute("SELECT * FROM Devises WHERE symbol='"+str(symbol)+"'")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log("get_devises_from_symbol_SQL",str(inst))
+            return inst
+        devises = res.fetchall()[0]
+        formated_devises = [devises[1],devises[2]]
+        return(formated_devises)
+        
+        
+    
 def main():
     sql = sqlAcces()
 
@@ -162,8 +196,11 @@ def main():
     #sql.set_ecart_bet("DOGEBTC.csv")
     #retour = sql.get_ecart_bet_from_symbol("DOGEBTC")
     #print(retour)
-    last_close = sql.get_ecart_bet_from_symbol_and_ID("DOGEBTC",15)
-    print(last_close)
+    #last_close = sql.get_ecart_bet_from_symbol_and_ID("DOGEBTC",15)
+    #print(last_close)
+    devises = sql.get_symbols()
+    sql.get_devises_from_symbol(devises[0])
+
 
 
 if __name__ == '__main__':
