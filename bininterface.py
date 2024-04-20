@@ -199,9 +199,9 @@ class binAcces():
     def baisser_niveau_ordre(self,ID_ordre):
         ordre = self.sql.get_order_info_by_ID(ID_ordre)
         if ordre["sens"] == self.client.SIDE_BUY:
-            self.baisse_niveau_achat(self,ordre)
+            self.baisse_niveau_achat(ordre)
         if ordre["sens"] == self.client.SIDE_SELL:
-            self.baisse_niveau_vente(self,ordre)
+            self.baisse_niveau_vente(ordre)
     
     def baisse_niveau_achat(self,ordre):
         if ordre["niveau"] == 4:
@@ -266,6 +266,7 @@ def main():
     #found = bin.get_price("DOGEBTC")
 
     #print(found)
+    
 
 
 if __name__ == '__main__':

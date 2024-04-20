@@ -175,8 +175,33 @@ class sqlAcces():
             return inst
         devises = res.fetchall()[0]
         formated_devises = [devises[1],devises[2]]
+        formated_devises = {"devise1":devises[1],
+                            "devise2":devises[2],
+                            "down":devises[3],
+                            "local":devises[4],
+                            "up":devises[5]}
         return(formated_devises)
-        
+    
+    def set_KPI_restes(self,symbol,restes,last_ID):
+        try:
+            self.cur.execute("INSERT INTO reste VALUES(?,?,?,?,?)",
+                                 (datetime.now(timezone.utc),symbol,restes[0],restes[1],int(last_ID)))
+        except sqlite3.IntegrityError as inst:
+            self.new_log("set_KPI_restes_SQL",str(inst))
+            return inst
+        ret = self.con.commit()
+        return ret
+    
+    def get_last_reste(self,symbol):
+        try:
+            res = self.cur.execute("SELECT max(date),symbol,devise1,devise2,last_ID FROM reste WHERE symbol='"+symbol+"'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log("get_last_reste_SQL",str(inst))
+            return inst
+        self.con.commit()
+        reste = res.fetchall()[0]
+        reste_dic = {"devise1":reste[2],"devise2":reste[3]}
+        return reste_dic
         
     
 def main():

@@ -2,6 +2,7 @@ import time
 
 from bininterface import binAcces
 from sqlInterface import sqlAcces
+from KPI import Kpi
 
 
 class Basics():
@@ -9,6 +10,7 @@ class Basics():
     def __init__(self):
         self.sql = sqlAcces()
         self.bin = binAcces()
+        self.kpi = Kpi()
 
     def plus_proche(self,symbol):
         ecart_bet_dic = self.sql.get_ecart_bet_from_symbol(symbol)
@@ -46,8 +48,8 @@ class Basics():
             else:
                 ID_ecart_last_close = self.plus_proche(symbol)
             print(ID_ecart_last_close)
-            self.bin.new_achat(symbol,ID_ecart_last_close)
             self.bin.new_vente(symbol,ID_ecart_last_close)
+            self.bin.new_achat(symbol,ID_ecart_last_close)
 
     def verification_2_ordres(self,symbol):
         changement = self.bin.changement_status(symbol)
@@ -59,6 +61,7 @@ class Basics():
             last_filled_order = self.sql.get_last_filled(symbol)
             self.bin.new_achat(symbol,last_filled_order["ID_ecart"])
             self.bin.new_vente(symbol,last_filled_order["ID_ecart"])
+            self.kpi.reste_sur_limites(symbol)
 
     def verification_niveau_VS_timer(self,symbol):
         niveaux = self.sql.get_time_since_open(symbol)
@@ -66,10 +69,10 @@ class Basics():
         for key in keys:
             #Delais d attente de 30 min pour un ordre niveau 4
             if int(niveaux[key]["niveau"]) == 4 and niveaux[key]["time"].seconds > 1800:
-                self.bin.baisser_niveau_ordre(niveaux[key]["ID"])
+                self.bin.baisser_niveau_ordre(key)
             # Delas d attente de 3 heures pour un ordre de niveau 3
             if int(niveaux[key]["niveau"]) == 3 and niveaux[key]["time"].seconds > 10800:
-                self.bin.baisser_niveau_ordre(niveaux[key]["ID"])
+                self.bin.baisser_niveau_ordre(key)
     
 ###########################################################################
 #                                 MAIN                                    #
