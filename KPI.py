@@ -40,7 +40,17 @@ class Kpi():
         ajout_local[last_filled["ID_ecart"]] = (local/5)/ecart_bet[2]
         ajout_local[last_filled["ID_ecart"]+1] = (local/5)/ecart_bet[2]
         ajout_local[last_filled["ID_ecart"]+2] = (local/5)/ecart_bet[2]
-        print("toto")
+        print(ajout_local)
+        data_up = self.position_up()
+        for i in range(data_up[1]):
+            ajout_local[data_up[0]+i]=up/data_up[1]
+        self.bin.sql.set_ajout_tab(symbol,ajout_local,1)
+
+    def position_up(self):
+        ### TODO a penser #######
+        position = 60
+        largeur = 2
+        return [position,largeur]
 
 
 
@@ -52,6 +62,7 @@ def main():
     DEVISE="DOGEBTC"
     kpi = Kpi()
 
+    kpi.reste_sur_limites(DEVISE)
     last_restes = kpi.bin.sql.get_last_reste(DEVISE)
     print(last_restes)
     kpi.calcul_ajout(DEVISE,last_restes)

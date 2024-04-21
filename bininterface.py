@@ -11,7 +11,7 @@ class binAcces():
         self.client = Client(config["api"], config["secret"])
         self.sql = sqlAcces()
 
-    def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,niveau=1):
+    def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,niveau=1):
         try:
             response = self.client.create_order(symbol=symbol, 
                                             side=sens, 
@@ -23,49 +23,68 @@ class binAcces():
             self.sql.new_log("new_limite_order_Binance",str(inst))
             return ""
         
-        self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart,niveau)
+        self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart,flag_ajout,niveau)
         return response["orderId"]
     
+    def get_ajout_for_achat_order(self,symbol,flag_ajout,ID_ecart):
+        ajout = 0.0
+        if flag_ajout == 1:
+            ajout_dico = self.sql.get_ajout_flag(symbol)
+            keys = ajout_dico.keys()
+            for key in keys:
+                if key > ID_ecart:
+                    ajout += ajout_dico[key]
+
+        return ajout
+
     ###############################
     #donner l ID du dernier FILLED (clos)
     ###############################
-    def new_achat(self,symbol,ID_ecart):
+    def new_achat(self,symbol,ID_ecart,flag_ajout=0):
         last_ordre = self.sql.get_last_filled(symbol)
         if last_ordre["sens"]== Client.SIDE_SELL:
             bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
+            ajout = self.get_ajout_for_achat_order(symbol,flag_ajout,ID_ecart-1)
             self.new_limite_order(symbol,
-                                  bet_ecart[3],
+                                  bet_ecart[3]+ajout,
                                   bet_ecart[2],
                                   Client.SIDE_BUY,
-                                  ID_ecart-1)
+                                  ID_ecart-1,
+                                  flag_ajout)
         else:
             if int(last_ordre["niveau"])==1:
                 bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
+                ajout = self.get_ajout_for_achat_order(symbol,flag_ajout,ID_ecart-1)
                 self.new_limite_order(symbol,
-                                      bet_ecart[3],
+                                      bet_ecart[3]+ajout,
                                       bet_ecart[2],
                                       Client.SIDE_BUY,
                                       ID_ecart-1,
+                                      flag_ajout,
                                       2)
             
             elif int(last_ordre["niveau"])==2:
                 bet_ecart_1 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
                 bet_ecart_2 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-2)
+                ajout = self.get_ajout_for_achat_order(symbol,flag_ajout,ID_ecart-2)
                 self.new_limite_order(symbol,
-                                      bet_ecart_1[3]+bet_ecart_2[3],
+                                      bet_ecart_1[3]+bet_ecart_2[3]+ajout,
                                       bet_ecart_2[2],
                                       Client.SIDE_BUY,
                                       ID_ecart-2,
+                                      flag_ajout,
                                       3)
             else:
                 bet_ecart_1 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
                 bet_ecart_2 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-2)
                 bet_ecart_3 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-3)
+                ajout = self.get_ajout_for_achat_order(symbol,flag_ajout,ID_ecart-2)
                 self.new_limite_order(symbol,
-                                      bet_ecart_1[3]+bet_ecart_2[3]+bet_ecart_3[3],
+                                      bet_ecart_1[3]+bet_ecart_2[3]+bet_ecart_3[3]+ajout,
                                       bet_ecart_3[2],
                                       Client.SIDE_BUY,
                                       ID_ecart-3,
+                                      flag_ajout,
                                       4)
 
 
@@ -74,47 +93,55 @@ class binAcces():
     ###############################
     #donner l ID du dernier FILLED (clos)
     ###############################
-    def new_vente(self,symbol,ID_ecart):
+    def new_vente(self,symbol,ID_ecart,flag_ajout=0):
         last_ordre = self.sql.get_last_filled(symbol)
         if last_ordre["sens"]== Client.SIDE_BUY:
             bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
             bet_ecart_montant = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)
+            ajout = self.get_ajout_for_achat_order(symbol,flag_ajout,ID_ecart+1)
             self.new_limite_order(symbol,
-                                  bet_ecart_montant[3],
+                                  bet_ecart_montant[3]-ajout,
                                   bet_ecart_limite[2],
                                   Client.SIDE_SELL,
-                                  ID_ecart+1)
+                                  ID_ecart+1,
+                                  flag_ajout)
         else:
             if int(last_ordre["niveau"])==1:
                 bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
                 bet_ecart_montant = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)
+                ajout = self.get_ajout_for_achat_order(symbol,flag_ajout,ID_ecart+1)
                 self.new_limite_order(symbol,
-                                      bet_ecart_montant[3],
+                                      bet_ecart_montant[3]-ajout,
                                       bet_ecart_limite[2],
                                       Client.
                                       SIDE_SELL,
                                       ID_ecart+1,
+                                      flag_ajout,
                                       2)
             elif int(last_ordre["niveau"])==2:
                 bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+2)
                 bet_ecart_montant = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)
                 bet_ecart_montant_2 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
+                ajout = self.get_ajout_for_achat_order(symbol,flag_ajout,ID_ecart+2)
                 self.new_limite_order(symbol,
-                                      bet_ecart_montant[3]+bet_ecart_montant_2[3],
+                                      bet_ecart_montant[3]+bet_ecart_montant_2[3]-ajout,
                                       bet_ecart_limite[2],
                                       Client.SIDE_SELL,
                                       ID_ecart+2,
+                                      flag_ajout,
                                       3)
             else:
                 bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+3)
                 bet_ecart_montant = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)
                 bet_ecart_montant_2 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
                 bet_ecart_montant_3 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+2)
+                ajout = self.get_ajout_for_achat_order(symbol,flag_ajout,ID_ecart+2)
                 self.new_limite_order(symbol,
-                                      bet_ecart_montant[3]+bet_ecart_montant_2[3]+bet_ecart_montant_3[3],
+                                      bet_ecart_montant[3]+bet_ecart_montant_2[3]+bet_ecart_montant_3[3]-ajout,
                                       bet_ecart_limite[2],
                                       Client.SIDE_SELL,
                                       ID_ecart+3,
+                                      flag_ajout,
                                       4)
 
 
@@ -128,7 +155,7 @@ class binAcces():
             self.sql.new_log("new_market_order_Binance",str(inst))
             return ""
         
-        self.sql.new_order(response["orderId"],symbol,montant,"",response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_MARKET,sens)
+        self.sql.new_order(response["orderId"],symbol,montant,"",response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_MARKET,sens,0,0)
         return response["orderId"]
         
 
@@ -201,7 +228,7 @@ class binAcces():
         if ordre["sens"] == self.client.SIDE_BUY:
             self.baisse_niveau_achat(ordre)
         if ordre["sens"] == self.client.SIDE_SELL:
-            self.baisse_niveau_vente(ordre)
+            self.baisse_niveau_vente(ordre,ordre["flag_ajout"])
     
     def baisse_niveau_achat(self,ordre):
         if ordre["niveau"] == 4:
@@ -213,6 +240,7 @@ class binAcces():
                                   float(bet_ecart_1[2]),
                                   ordre["sens"],
                                   int(ordre["ID_ecart"])+1,
+                                  ordre["flag_ajout"],
                                   3)
         elif ordre["niveau"] == 3:
             self.cancel_order(ordre["ID"])
@@ -222,6 +250,7 @@ class binAcces():
                                   float(bet_ecart_1[2]),
                                   ordre["sens"],
                                   int(ordre["ID_ecart"])+1,
+                                  ordre["flag_ajout"],
                                   2)
 
     def baisse_niveau_vente(self,ordre):
@@ -235,6 +264,7 @@ class binAcces():
                                       bet_ecart_limite[2],
                                       ordre["sens"],
                                       int(ordre["ID_ecart"])-1,
+                                      ordre["flag_ajout"],
                                       3)
         elif ordre["niveau"] == 3:
             self.cancel_order(ordre["ID"])
@@ -245,6 +275,7 @@ class binAcces():
                                       bet_ecart_limite[2],
                                       ordre["sens"],
                                       int(ordre["ID_ecart"])-1,
+                                      ordre["flag_ajout"],
                                       2)
 
 

@@ -57,11 +57,20 @@ class Basics():
             self.bin.changement_update(changement)
             ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
             for odb in ordres_ouverts:
-                    self.bin.cancel_order(odb["ID"])
+                self.bin.cancel_order(odb["ID"])
             last_filled_order = self.sql.get_last_filled(symbol)
             self.bin.new_achat(symbol,last_filled_order["ID_ecart"])
             self.bin.new_vente(symbol,last_filled_order["ID_ecart"])
             self.kpi.reste_sur_limites(symbol)
+        else:
+            ajout_flag = self.sql.get_ajout_flag(symbol)
+            if ajout_flag == 1:
+                ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
+                if ordres_ouverts[0]["flag_ajout"] == 0:
+                    for odb in ordres_ouverts:
+                        self.bin.cancel_order(odb["ID"])
+                    self.bin.new_achat(symbol,last_filled_order["ID_ecart"],flag_ajout=0)
+                    ##### La on fait l'ajustement
 
     def verification_niveau_VS_timer(self,symbol):
         niveaux = self.sql.get_time_since_open(symbol)

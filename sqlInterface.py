@@ -8,10 +8,10 @@ class sqlAcces():
         self.cur = self.con.cursor()
 
 
-    def new_order(self,ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,niveau=1):
+    def new_order(self,ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,flag_ajout,niveau=1):
         try:
-            self.cur.execute("INSERT INTO Ordres VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-                             (ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,int(niveau)))
+            self.cur.execute("INSERT INTO Ordres VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                             (ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,int(niveau),int(flag_ajout)))
         except sqlite3.IntegrityError as inst:
             self.new_log("new_order_SQL",str(inst))
             return inst
@@ -131,7 +131,7 @@ class sqlAcces():
             return ""
         self.con.commit()
         ordres = res.fetchall()
-        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None):
+        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None):
             return ""
         ordre = self.convert_fetch_to_dico(ordres[0])
         return ordre
@@ -149,6 +149,7 @@ class sqlAcces():
                       "sens":ordre[9],
                       "ID_ecart":ordre[10],
                       "niveau":ordre[11],
+                      "flag_ajout":ordre[12],
                  }
         return ordre_dico
     
@@ -202,29 +203,49 @@ class sqlAcces():
         reste = res.fetchall()[0]
         reste_dic = {"devise1":reste[2],"devise2":reste[3]}
         return reste_dic
+    
+    def set_ajout_tab(self,symbol,ajout_dic,flag):
+        try:
+            keys = ajout_dic.keys()
+            for ID_ecart in keys:
+                self.cur.execute("INSERT INTO ajout VALUES(?,?,?,?,?)",
+                                 (ID_ecart,symbol,ajout_dic[ID_ecart],flag,datetime.now(timezone.utc)))
+        except Exception as inst:
+            self.new_log("set_ajout_tab_SQL",str(inst))
+        self.con.commit()
+
+    def get_ajout_flag(self,symbol):
+        try:
+            res = self.cur.execute("SELECT ID_ecart FROM ajout WHERE symbol='"+symbol+"' and flag=1")
+        except sqlite3.IntegrityError as inst:
+            self.new_log("get_ajout_flag_SQL",str(inst))
+            return inst
+        self.con.commit()
+        reste = res.fetchall()
+        if reste == []:
+            return 0
+        else:
+            return 1
+        
+    def get_ajout_dic(self,symbol):
+        try:
+            res = self.cur.execute("SELECT ID_ecart FROM ajout WHERE symbol='"+symbol+"' and flag=1")
+        except sqlite3.IntegrityError as inst:
+            self.new_log("get_ajout_dic_SQL",str(inst))
+            return inst
+        self.con.commit()
+        reste = res.fetchall()
+        ajout_dico = {}
+        for ajout_sql in reste:
+            ajout_dico[ajout_sql[0]]=ajout_sql[2]
+        return ajout_dico
         
     
 def main():
     sql = sqlAcces()
+    DEVISE='DOGEBTC'
 
-    #sql.new_order(1,"XRPEUR",200,0.1,"FILLED",10,12,200)
-    #sql.new_order(2,"XRPEUR",500,0.1,"FILLED",10,12,200)
-    #sql.delete_order(1)
-    #sql.delete_order(2)
-    #Ordre = sql.get_order_info_by_ID("646164940")
-    #sql.update_order(3,"PART","10/12/2017",50)
-    #res = sql.get_orders_status_filter("FILLED")
-    #print("toto")
-    #print(res)
-    #print("toto")
-    #sql.new_log("la","pas bien")
-    #sql.set_ecart_bet("DOGEBTC.csv")
-    #retour = sql.get_ecart_bet_from_symbol("DOGEBTC")
-    #print(retour)
-    #last_close = sql.get_ecart_bet_from_symbol_and_ID("DOGEBTC",15)
-    #print(last_close)
-    devises = sql.get_symbols()
-    sql.get_devises_from_symbol(devises[0])
+    sql.get_ajout_flag("XRPEUR")
 
 
 
