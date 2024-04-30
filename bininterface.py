@@ -1,6 +1,7 @@
 from binance.client import Client
 import json
 from datetime import datetime, timezone
+import time
 
 from sqlInterface import sqlAcces
 
@@ -255,6 +256,8 @@ class binAcces():
                             change.append({"orderId":ob["orderId"],"status":ob["status"],"executedQty":ob["executedQty"]})
         except Exception as inst:
             self.sql.new_log_error("changement_status_Binance",str(inst),symbol)
+            time.sleep(60)
+            change = []
         return change
     
     ####################################

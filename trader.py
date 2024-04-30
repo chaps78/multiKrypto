@@ -62,17 +62,17 @@ class Basics():
 
         if len(ordres_DB) ==1 :
             if len(ordres_new) == 1:
-                self.tele("nouvel ordre FILLED")
+                self.tele.send_message("nouvel ordre FILLED")
                 self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un NEW : "+str(ordres_DB),symbol)
                 self.un_ordre_filled_autre_new(ordres_DB,symbol)
                 # un ordre ferme et un NEW
             elif len(ordres_partial) == 1:
-                self.tele("nouvel ordre avec un FILLED")
+                self.tele.send_message("nouvel ordre avec un FILLED")
                 self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un PARTIALY : "+str(ordres_DB),symbol)
                 self.un_ordre_filled_autre_partial(ordres_partial,symbol)
                 # un ordre ferme et l autre partialy FILLED
         elif len(ordres_DB) == 0 :
-            self.tele("deux ordres clos en meme temps")
+            self.tele.send_message("deux ordres clos en meme temps")
             self.sql.new_log_debug("verification_2_ordres_V2","deux ordres FILLED : "+str(ordres_DB),symbol)
             self.deux_ordres_filled(symbol)
             #Deux ordres ont ete fermes
