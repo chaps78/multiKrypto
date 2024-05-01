@@ -117,6 +117,19 @@ class sqlAcces():
             self.new_log_error("set_ecart_bet_SQL",str(inst),"NA")
         self.con.commit()
 
+    def set_ajout(self,fichier_CSV):
+        file = open(fichier_CSV, "r")
+        lines = file.readlines()
+        file.close()
+        try:
+            for ligne in lines:
+                tab_ligne = ligne.split(",")
+                self.cur.execute("INSERT INTO ajout VALUES(?,?,?,?)",
+                                 (tab_ligne[0],tab_ligne[1],float(tab_ligne[2]),datetime.now(timezone.utc)))
+        except Exception as inst:
+            self.new_log_error("set_ecart_bet_SQL",str(inst),"NA")
+        self.con.commit()
+
 
     def get_ecart_bet_from_symbol(self,symbol):
         try:
@@ -354,7 +367,9 @@ def main():
     #print(sql.get_montant_entre_ordres(DEVISE,9,6))
     #print(sql.new_log_debug("ici","message","XRPEUR"))
     #sql.set_ecart_bet("XRPEUR.csv")
-    print(sql.get_last_filled("XRPEUR"))
+    #print(sql.get_last_filled("XRPEUR"))
+    #sql.set_ecart_bet("XRPEUR.csv")
+    sql.set_ajout("XRPEUR_Ajout.csv")
 
 if __name__ == '__main__':
      main()

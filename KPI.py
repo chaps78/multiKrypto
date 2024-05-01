@@ -5,7 +5,7 @@ class Kpi():
 
     def __init__(self):
         self.bin = binAcces()
-
+    
     def reste_sur_limites(self,symbol):
         last_filled = self.bin.sql.get_last_filled(symbol)
         devises=self.bin.sql.get_devises_from_symbol(symbol)
@@ -14,7 +14,7 @@ class Kpi():
         devise2 = founds[devises["devise2"]]
         ecart_bet_dic = self.bin.sql.get_ecart_bet_from_symbol(symbol)
         ID_max = max(ecart_bet_dic.keys())
-        ID_ecart_courant = last_filled["ID_ecart"]+1
+        ID_ecart_courant = last_filled["ID_ecart"]-1
         while ID_ecart_courant < ID_max:
             ID_ecart_courant+=1
             devise1 -= ecart_bet_dic[ID_ecart_courant][1]
