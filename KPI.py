@@ -5,7 +5,7 @@ class Kpi():
 
     def __init__(self):
         self.bin = binAcces()
-    
+
     def reste_sur_limites(self,symbol):
         last_filled = self.bin.sql.get_last_filled(symbol)
         devises=self.bin.sql.get_devises_from_symbol(symbol)
@@ -29,7 +29,8 @@ class Kpi():
     def calcul_ajout(self,symbol,restes):
         last_filled = self.bin.sql.get_last_filled(symbol)
         ecart_bet = self.bin.sql.get_ecart_bet_from_symbol_and_ID(symbol,last_filled["ID_ecart"])
-        benef = restes["devise2"]
+        benef = restes["devise2"]-self.bin.sql.get_epargne(symbol)
+        breakpoint()
         if benef>0.00001:
             devise_percent = self.bin.sql.get_devises_from_symbol(symbol)
             down = benef*devise_percent["down"]/100
@@ -62,18 +63,17 @@ class Kpi():
 #                                 MAIN                                    #
 ###########################################################################
 def main():
-    DEVISE="DOGEBTC"
+    DEVISE="XRPEUR"
     kpi = Kpi()
 
-    current_reste = kpi.reste_sur_limites(DEVISE)
-    print(current_reste)
+    #current_reste = kpi.reste_sur_limites(DEVISE)
+    #print(current_reste)
     last_restes = kpi.bin.sql.get_last_reste(DEVISE)
     print(last_restes)
-    #kpi.calcul_ajout(DEVISE,last_restes)
+    kpi.calcul_ajout(DEVISE,last_restes)
 
 
 
 
 if __name__ == '__main__':
      main()
-

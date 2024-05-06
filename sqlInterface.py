@@ -56,7 +56,7 @@ class sqlAcces():
         for ordre in res.fetchall():
             ordres.append(self.convert_fetch_to_dico(ordre))
         return ordres
-    
+
 
     def get_time_since_open(self,symbol):
         ordres_ouverts = self.get_orders_status_symbol_filter("NEW",symbol)
@@ -65,8 +65,8 @@ class sqlAcces():
             retour[ordre_ouvert["ID"]] = {"time":((datetime.now(timezone.utc)-datetime.fromisoformat(ordre_ouvert["date_debut"]))),
                                           "niveau":ordre_ouvert["niveau"]}
         return retour
-            
-    
+
+
 
     def get_order_info_by_ID(self,ID):
         try:
@@ -81,7 +81,7 @@ class sqlAcces():
             self.new_log_error("get_order_info_by_ID_SQL",str(inst),ordre_format["symbol"])
             return inst
         return ordre_format
-    
+
 
     def new_log_error(self,emplacement,message,symbol):
         try:
@@ -143,7 +143,7 @@ class sqlAcces():
         for ecart_SQL in ecarts_SQL:
             ecart_dico[int(ecart_SQL[0])]=[ecart_SQL[2],ecart_SQL[3]]
         return ecart_dico
-    
+
     def get_ecart_bet_from_symbol_and_ID(self,symbol,ID):
         try:
             res = self.cur.execute("SELECT * FROM ecart_bet WHERE ID='"+str(ID)+"' AND symbol='"+str(symbol)+"'")
@@ -156,7 +156,7 @@ class sqlAcces():
         ###############
         ret = res.fetchall()
         return ret[0]
-    
+
     def get_last_filled(self,symbol):
         try:
             res = self.cur.execute("SELECT *, MAX(date_debut) FROM Ordres WHERE status='FILLED' AND symbol='"+str(symbol)+"'")
@@ -169,7 +169,7 @@ class sqlAcces():
             return ""
         ordre = self.convert_fetch_to_dico(ordres[0])
         return ordre
-        
+
     def get_last_filled_buy(self,symbol):
         try:
             res = self.cur.execute("SELECT *, MAX(date_debut) FROM Ordres WHERE sens='BUY' AND status='FILLED' AND symbol='"+str(symbol)+"'")
@@ -182,7 +182,7 @@ class sqlAcces():
             return ""
         ordre = self.convert_fetch_to_dico(ordres[0])
         return ordre
-    
+
     def get_last_filled_sell(self,symbol):
         try:
             res = self.cur.execute("SELECT *, MAX(date_debut) FROM Ordres WHERE sens='SELL' AND status='FILLED' AND symbol='"+str(symbol)+"'")
@@ -195,7 +195,38 @@ class sqlAcces():
             return ""
         ordre = self.convert_fetch_to_dico(ordres[0])
         return ordre
-    
+
+    def update_bet_with_ID(self,symbol,ID,bet_value):
+        try:
+
+            self.cur.execute("UPDATE ecart_bet SET bet="
+                             +str(bet_value)
+                             +" WHERE ID="
+                             +str(ID)
+                             +" AND symbol='"+symbol+"'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("update_bet_with_ID_SQL",str(inst),symbol)
+            return inst
+        self.con.commit()
+
+
+    def add_bet_after_sell(self,symbol,last_filled):
+        if last_filled["sens"] == "SELL":
+            current_bet = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-1)[3]
+            if int(last_filled["niveau"]) == 1 or int(last_filled["niveau"]) == 2:
+                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+1)
+            elif int(last_filled["niveau"]) == 3:
+                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+1)
+                bet_NV_3 = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-2)[3]
+                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-2,int(bet_NV_3)+1)
+            elif int(last_filled["niveau"]) == 4:
+                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+1)
+                bet_NV_3 = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-2)[3]
+                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-2,int(bet_NV_3)+1)
+                bet_NV_4 = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-3)[3]
+                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-3,int(bet_NV_4)+1)
+
+
     def convert_fetch_to_dico(self,ordre):
         ordre_dico = {"ID":ordre[0],
                       "symbol":ordre[1],
@@ -212,7 +243,7 @@ class sqlAcces():
                       "flag_ajout":ordre[12],
                  }
         return ordre_dico
-    
+
     def get_symbols(self):
         try:
             res = self.cur.execute("SELECT * FROM Devises")
@@ -226,7 +257,7 @@ class sqlAcces():
         for devise_SQL in devises_SQL:
             devises_ret.append(devise_SQL[0])
         return devises_ret
-    
+
     def get_devises_from_symbol(self,symbol):
         try:
             res = self.cur.execute("SELECT * FROM Devises WHERE symbol='"+str(symbol)+"'")
@@ -242,7 +273,7 @@ class sqlAcces():
                             "local":devises[4],
                             "up":devises[5]}
         return(formated_devises)
-    
+
     def set_KPI_restes(self,symbol,restes,last_ID):
         try:
             self.cur.execute("INSERT INTO reste VALUES(?,?,?,?,?)",
@@ -252,7 +283,7 @@ class sqlAcces():
             return inst
         ret = self.con.commit()
         return ret
-    
+
     def get_last_reste(self,symbol):
         try:
             res = self.cur.execute("SELECT max(date),symbol,devise1,devise2,last_ID FROM reste WHERE symbol='"+symbol+"'")
@@ -263,17 +294,17 @@ class sqlAcces():
         reste = res.fetchall()[0]
         reste_dic = {"devise1":reste[2],"devise2":reste[3]}
         return reste_dic
-    
+
     def get_ajout_reel_by_ID(self,symbol,ID_ecart):
         try:
 
             res = self.cur.execute("SELECT * FROM ajout WHERE ID_ecart="+str(ID_ecart)+" AND symbol='"+symbol+"'",)
         except Exception as inst:
-            self.new_log_error("set_ajout_tab_SQL",str(inst),symbol)
+            self.new_log_error("get_ajout_reel_by_ID_SQL",str(inst),symbol)
         self.con.commit()
         reste = res.fetchall()
         return reste[0][2]
-    
+
     def set_ajout_tab(self,symbol,ajout_dic):
         try:
             keys = ajout_dic.keys()
@@ -297,8 +328,8 @@ class sqlAcces():
             if reste[2]>1:
                 return 1
         return 0
- 
-        
+
+
     def get_ajout_entier_dic(self,symbol):
         try:
             res = self.cur.execute("SELECT * FROM ajout WHERE symbol='"+symbol+"'")
@@ -312,7 +343,7 @@ class sqlAcces():
             if ajout_sql[2]>1:
                 ajout_dico[ajout_sql[0]]=int(ajout_sql[2])
         return ajout_dico
-    
+
     def add_ajout_to_ecart(self,symbol):
         ajout = self.get_ajout_entier_dic(symbol)
         keys = ajout.keys()
@@ -337,7 +368,7 @@ class sqlAcces():
         except sqlite3.IntegrityError as inst:
             self.new_log_error("add_ajout_to_ecart_SQL_2",str(inst),symbol)
             return inst
-        
+
 
     #Pour un double achat on recupere le montant entre les deux ordres
     def get_montant_entre_ordres(self,symbol,ID_bas,ID_haut):
@@ -352,7 +383,17 @@ class sqlAcces():
             ID_bas +=1
         return somme
 
-    
+    def get_epargne(self,symbol):
+        try:
+            res = self.cur.execute("SELECT * FROM Devises WHERE symbol='"+symbol+"'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_ajout_entier_dic_SQL",str(inst),symbol)
+            return inst
+        self.con.commit()
+        epargne = res.fetchall()[0][6]
+        return epargne
+
+
 def main():
     sql = sqlAcces()
     DEVISE='DOGEBTC'
@@ -369,7 +410,8 @@ def main():
     #sql.set_ecart_bet("XRPEUR.csv")
     #print(sql.get_last_filled("XRPEUR"))
     #sql.set_ecart_bet("XRPEUR.csv")
-    sql.set_ajout("XRPEUR_Ajout.csv")
+    #sql.set_ajout("XRPEUR_Ajout.csv")
+    print(sql.get_epargne("XRPEUR"))
 
 if __name__ == '__main__':
      main()
