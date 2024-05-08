@@ -323,7 +323,7 @@ class binAcces():
                                   ordre["sens"],
                                   int(ordre["ID_ecart"])+1,
                                   ordre["flag_ajout"],
-                                  2)
+                                  1)
 
     def baisse_niveau_vente(self,ordre):
         if ordre["niveau"] == 4:
@@ -348,7 +348,7 @@ class binAcces():
                                       ordre["sens"],
                                       int(ordre["ID_ecart"])-1,
                                       ordre["flag_ajout"],
-                                      2)
+                                      1)
 
 
 def main():    

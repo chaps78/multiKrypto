@@ -210,22 +210,39 @@ class sqlAcces():
         self.con.commit()
 
 
+    def add_to_ajout(self,symbol,ID_ecart,valeur_to_add):
+        try:
+            curent_value = self.get_ajout_reel_by_ID(symbol,ID_ecart)
+            valeur_to_update = curent_value + valeur_to_add
+            self.cur.execute("UPDATE ajout SET ajout="+str(valeur_to_update)+" WHERE ID_ecart="+str(ID_ecart)+" AND symbol='"+symbol+"'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("add_to_ajout_SQL",str(inst),symbol)
+            return inst
+        self.con.commit()
+
+
+
     def add_bet_after_sell(self,symbol,last_filled):
         if last_filled["sens"] == "SELL":
             current_bet = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-1)[3]
             if int(last_filled["niveau"]) == 1 or int(last_filled["niveau"]) == 2:
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+1)
+                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,1)
             elif int(last_filled["niveau"]) == 3:
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+1)
+                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,1)
                 bet_NV_3 = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-2)[3]
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-2,int(bet_NV_3)+1)
+                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-2,1)
             elif int(last_filled["niveau"]) == 4:
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+1)
+                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,1)
                 bet_NV_3 = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-2)[3]
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-2,int(bet_NV_3)+1)
+                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-2,1)
                 bet_NV_4 = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-3)[3]
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-3,int(bet_NV_4)+1)
-
+                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-3,1)
 
     def convert_fetch_to_dico(self,ordre):
         ordre_dico = {"ID":ordre[0],
@@ -411,7 +428,8 @@ def main():
     #print(sql.get_last_filled("XRPEUR"))
     #sql.set_ecart_bet("XRPEUR.csv")
     #sql.set_ajout("XRPEUR_Ajout.csv")
-    print(sql.get_epargne("XRPEUR"))
+    #print(sql.get_epargne("XRPEUR"))
+    sql.add_to_ajout("XRPEUR",57,1)
 
 if __name__ == '__main__':
      main()

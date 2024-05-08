@@ -229,7 +229,7 @@ class Basics():
                 self.bin.baisser_niveau_ordre(key)
             # Delas d attente de 3 heures pour un ordre de niveau 3
             if int(niveaux[key]["niveau"]) == 3 and niveaux[key]["time"].seconds > 10800:
-                self.tele.send_message("baisse de niveau 3 a 2")
+                self.tele.send_message("baisse de niveau 3 a 1")
                 self.bin.baisser_niveau_ordre(key)
 
 ###########################################################################
