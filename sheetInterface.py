@@ -4,11 +4,9 @@ from sqlInterface import sqlAcces
 
 
 
-wsheet = sheet.worksheet('XRPEUR')
-KPI_tab=[["aa1","aa2"],["bb1","bb2"]]
-wsheet.update('H3', KPI_tab)
 
-sql = sqlAcces()
+
+
 
 class sheetAcces():
     def __init__(self):
@@ -17,10 +15,22 @@ class sheetAcces():
         client = gspread.authorize(creds)
         self.sheet = client.open("binance")
         self.sql = sqlAcces()
+    
+    def update_values(self,symbol):
+        ecart = self.sql.get_ecart_bet_from_symbol(symbol)
+        wsheet = self.sheet.worksheet('XRPEUR')
+        keys = ecart.keys()
+        ecart_tab=[]
+        for key in keys:
+            ecart_tab.append([key,ecart[key][0],ecart[key][1]])
+        wsheet.update('A2', ecart_tab)
+        ajout = self.sql.get_ajout_entier_dic(symbol)
+        breakpoint()
 
 
 def main():    
     sheet = sheetAcces()
+    sheet.update_values("XRPEUR")
 
     
 

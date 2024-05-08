@@ -88,7 +88,6 @@ class Basics():
         ############## pour les ajouts progressifs #######################
         if int(last_filled_order["flag_ajout"]) == 1:
             self.sql.new_log_debug("verification_2_ordres_flag_ordre_ON",str(ordres_ouvert),symbol)
-            self.sql.add_ajout_to_ecart(symbol)
         ##################################################################
         self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
         #breakpoint()
@@ -107,11 +106,6 @@ class Basics():
                 self.bin.new_market_order(symbol,ordres_partiel[key]["executedQty"],self.bin.client.SIDE_BUY)
             self.bin.new_market_order
         last_filled_order = self.sql.get_last_filled(symbol)
-        ############## pour les ajouts progressifs #######################
-        if int(last_filled_order["flag_ajout"]) == 1:
-            self.sql.new_log_debug("verification_2_ordres_flag_ordre_ON",str(ordres_partiel),symbol)
-            self.sql.add_ajout_to_ecart(symbol)
-        ##################################################################
         self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
 
         self.bin.new_achat(symbol,last_filled_order["ID_ecart"])
@@ -165,9 +159,6 @@ class Basics():
             for odb in ordres_ouverts:
                 self.bin.cancel_order(odb["ID"])
             last_filled_order = self.sql.get_last_filled(symbol)
-            if int(ordres_ouverts[0]["flag_ajout"]) == 1:
-                self.sql.new_log_debug("verification_2_ordres_flag_ordre_ON",str(ordres_ouverts),symbol)
-                self.sql.add_ajout_to_ecart(symbol)
             self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
             self.bin.new_achat(symbol,last_filled_order["ID_ecart"])
             self.bin.new_vente(symbol,last_filled_order["ID_ecart"])
@@ -176,8 +167,6 @@ class Basics():
             self.sql.new_log_debug("Double vente",str(changement),symbol)
             self.bin.changement_update(changement,symbol)
             last_filled_order = self.sql.get_last_filled(symbol)
-            if int(ordres_ouverts[0]["flag_ajout"]) == 1:
-                self.sql.add_ajout_to_ecart(symbol)
 
             ordre_1 = self.sql.get_order_info_by_ID(changement[0]["orderId"])
             ordre_2 = self.sql.get_order_info_by_ID(changement[1]["orderId"])
