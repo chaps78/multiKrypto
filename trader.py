@@ -4,6 +4,7 @@ from bininterface import binAcces
 from sqlInterface import sqlAcces
 from KPI import Kpi
 from telegramInterface import teleAcces
+from sheetInterface import sheetAcces
 
 
 class Basics():
@@ -13,6 +14,7 @@ class Basics():
         self.bin = binAcces()
         self.kpi = Kpi()
         self.tele = teleAcces()
+        self.sheet = sheetAcces()
 
     def plus_proche(self,symbol):
         ecart_bet_dic = self.sql.get_ecart_bet_from_symbol(symbol)
@@ -67,6 +69,7 @@ class Basics():
                 self.tele.send_message("FILLED "+symbol+" :"+str(last_filled["sens"])+"\n"+str(last_filled["montant_execute"]))
                 self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un NEW : "+str(ordres_DB),symbol)
                 self.un_ordre_filled_autre_new(ordres_DB,symbol)
+                self.sheet.update_all_info(symbol)
                 # un ordre ferme et un NEW
             elif len(ordres_partial) == 1:
                 self.tele.send_message("nouvel ordre avec un partial FILLED")
@@ -232,6 +235,7 @@ def main():
     #    Initialisation
     ################################################
     for DEVISE in DEVISES:
+        basic.tele.send_message("Bonjour")
         basic.initialise(DEVISE)
         time.sleep(3)
     while True:

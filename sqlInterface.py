@@ -220,23 +220,41 @@ class sqlAcces():
             return inst
         self.con.commit()
 
+    def calcul_delta_pour_ajout(self,symbol,last_filled,qtt):
+        ecart_dessous = self.get_ecart_bet_from_symbol_and_ID(symbol,last_filled["ID_ecart"]-1)
+        delta=float(last_filled["limite"])-float(ecart_dessous[2])
+        benef = delta*last_filled["montant"]-2*0.001*last_filled["montant"]*last_filled["limite"]
+        prix_reduce = last_filled["limite"]-benef/qtt
+        if prix_reduce<0:
+            return "NA"
+        ecart_tab = self.get_ecart_bet_from_symbol(symbol)
+        keys = ecart_tab.keys()
+        ID_down = 0
+        for key in keys:
+            if ecart_tab[key][0]>prix_reduce:
+                ID_down=key
+                break
+        self.add_to_ajout(symbol,int(ID_down),-qtt)
+        self.update_bet_with_ID(symbol,ID_down,ecart_tab[ID_down][1]-qtt)
+        return ID_down
 
 
     def add_bet_after_sell(self,symbol,last_filled):
         if last_filled["sens"] == "SELL":
             current_bet = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-1)[3]
             if int(last_filled["niveau"]) == 1 or int(last_filled["niveau"]) == 2:
-                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+1)
-                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,1)
+                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+2)
+                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,2)
+                self.calcul_delta_pour_ajout(symbol,last_filled,2)
             elif int(last_filled["niveau"]) == 3:
-                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+1)
-                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,1)
+                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+2)
+                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,2)
                 bet_NV_3 = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-2)[3]
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-2,int(bet_NV_3)+1)
                 self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-2,1)
             elif int(last_filled["niveau"]) == 4:
-                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+1)
-                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,1)
+                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+2)
+                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,2)
                 bet_NV_3 = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-2)[3]
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-2,int(bet_NV_3)+1)
                 self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-2,1)
@@ -360,6 +378,16 @@ class sqlAcces():
             if ajout_sql[2]>1:
                 ajout_dico[ajout_sql[0]]=int(ajout_sql[2])
         return ajout_dico
+    
+    def get_ajout(self,symbol):
+        try:
+            res = self.cur.execute("SELECT * FROM ajout WHERE symbol='"+symbol+"'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_ajout_SQL",str(inst),symbol)
+            return inst
+        self.con.commit()
+        ajout = res.fetchall()
+        return ajout
 
     def add_ajout_to_ecart(self,symbol):
         ajout = self.get_ajout_entier_dic(symbol)
@@ -429,7 +457,12 @@ def main():
     #sql.set_ecart_bet("XRPEUR.csv")
     #sql.set_ajout("XRPEUR_Ajout.csv")
     #print(sql.get_epargne("XRPEUR"))
-    sql.add_to_ajout("XRPEUR",57,1)
+    #sql.add_to_ajout("XRPEUR",57,1)
+    lastfilled = sql.get_last_filled_sell("XRPEUR")
+    #for i in range(180):
+    #    sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,2,158+2*i)
+    sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,2)
+
 
 if __name__ == '__main__':
      main()
