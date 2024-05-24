@@ -56,33 +56,38 @@ class Basics():
             self.bin.new_achat(symbol,ID_ecart_last_close)
 
     def verification_2_ordres_V2(self,symbol):
-        changement = self.bin.changement_status(symbol)
-        self.bin.changement_update(changement,symbol)
-        ordres_new = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
-        ordres_partial = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_PARTIALLY_FILLED,symbol)
-        ordres_DB = ordres_partial + ordres_new
+        try:
+            changement = self.bin.changement_status(symbol)
+            self.bin.changement_update(changement,symbol)
+            ordres_new = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
+            ordres_partial = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_PARTIALLY_FILLED,symbol)
+            ordres_DB = ordres_partial + ordres_new
 
-        if len(ordres_DB) ==1 :
-            if len(ordres_new) == 1:
-                last_filled = self.sql.get_last_filled(symbol)
-                self.sql.add_bet_after_sell(symbol,last_filled)
-                self.tele.send_message("FILLED "+symbol+" :"+str(last_filled["sens"])+"\n"+str(last_filled["montant_execute"]))
-                self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un NEW : "+str(ordres_DB),symbol)
-                self.un_ordre_filled_autre_new(ordres_DB,symbol)
-                self.sheet.update_all_info(symbol)
-                # un ordre ferme et un NEW
-            elif len(ordres_partial) == 1:
-                self.tele.send_message("nouvel ordre avec un partial FILLED")
-                self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un PARTIALY : "+str(ordres_DB),symbol)
-                self.un_ordre_filled_autre_partial(ordres_partial,symbol)
-                # un ordre ferme et l autre partialy FILLED
-        elif len(ordres_DB) == 0 :
-            self.tele.send_message("deux ordres clos en meme temps")
-            self.sql.new_log_debug("verification_2_ordres_V2","deux ordres FILLED : "+str(ordres_DB),symbol)
-            self.deux_ordres_filled(symbol)
-            #Deux ordres ont ete fermes
-        elif len(ordres_DB) > 2 :
-            self.sql.new_log_error("verification_2_ordres_V2","Plus de deux ordres ouverts : "+ordres_DB, symbol)
+            if len(ordres_DB) ==1 :
+                if len(ordres_new) == 1:
+                    last_filled = self.sql.get_last_filled(symbol)
+                    self.sql.calcul_benefice(symbol,last_filled)
+                    self.sql.add_bet_after_sell(symbol,last_filled)
+                    self.tele.send_message("FILLED "+symbol+" :"+str(last_filled["sens"])+"\n"+str(last_filled["montant_execute"]))
+                    self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un NEW : "+str(ordres_DB),symbol)
+                    self.un_ordre_filled_autre_new(ordres_DB,symbol)
+                    self.sheet.update_all_info(symbol)
+                    # un ordre ferme et un NEW
+                elif len(ordres_partial) == 1:
+                    self.tele.send_message("nouvel ordre avec un partial FILLED")
+                    self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un PARTIALY : "+str(ordres_DB),symbol)
+                    self.un_ordre_filled_autre_partial(ordres_partial,symbol)
+                    # un ordre ferme et l autre partialy FILLED
+            elif len(ordres_DB) == 0 :
+                self.tele.send_message("deux ordres clos en meme temps")
+                self.sql.new_log_debug("verification_2_ordres_V2","deux ordres FILLED : "+str(ordres_DB),symbol)
+                self.deux_ordres_filled(symbol)
+                #Deux ordres ont ete fermes
+            elif len(ordres_DB) > 2 :
+                self.sql.new_log_error("verification_2_ordres_V2_trader","probleme de trade", symbol)
+        except Exception as inst:
+            self.sql.new_log_debug("get_ajout_entier_dic_SQL",str(inst),symbol)
+            return inst
 
     def un_ordre_filled_autre_new(self,ordres_ouvert,symbol):
         for ordre_ouvert in ordres_ouvert:
@@ -93,7 +98,6 @@ class Basics():
             self.sql.new_log_debug("verification_2_ordres_flag_ordre_ON",str(ordres_ouvert),symbol)
         ##################################################################
         self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
-        #breakpoint()
         self.bin.new_achat(symbol,last_filled_order["ID_ecart"])
         self.bin.new_vente(symbol,last_filled_order["ID_ecart"])
         self.kpi.reste_sur_limites(symbol)
@@ -122,7 +126,6 @@ class Basics():
                                                              last_filled_order_buy["ID_ecart"],
                                                              last_filled_order_sell["ID_ecart"])
         bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,last_filled_order_buy["ID_ecart"]-1)
-        #breakpoint()
         self.bin.new_limite_order(symbol,
                                   bet_ecart[3]+montant_interval,
                                   bet_ecart[2],
@@ -234,10 +237,10 @@ def main():
     ################################################
     #    Initialisation
     ################################################
-    for DEVISE in DEVISES:
-        basic.tele.send_message("Bonjour")
-        basic.initialise(DEVISE)
-        time.sleep(3)
+    basic.tele.send_message("Bonjour")
+    #for DEVISE in DEVISES:
+    #    basic.initialise(DEVISE)
+    #    time.sleep(3)
     while True:
         for DEVISE in DEVISES:
             basic.verification_2_ordres_V2(DEVISE)

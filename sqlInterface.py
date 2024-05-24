@@ -11,10 +11,10 @@ class sqlAcces():
         self.tele = teleAcces()
 
 
-    def new_order(self,ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,flag_ajout,niveau=1):
+    def new_order(self,ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,flag_ajout,niveau=1,benefice=0.0):
         try:
-            self.cur.execute("INSERT INTO Ordres VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                             (ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,int(niveau),int(flag_ajout)))
+            self.cur.execute("INSERT INTO Ordres VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                             (ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,int(niveau),int(flag_ajout),benefice))
         except sqlite3.IntegrityError as inst:
             self.new_log_error("new_order_SQL",str(inst),symbol)
             return inst
@@ -165,7 +165,7 @@ class sqlAcces():
             return ""
         self.con.commit()
         ordres = res.fetchall()
-        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None):
+        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None, None):
             return ""
         ordre = self.convert_fetch_to_dico(ordres[0])
         return ordre
@@ -178,7 +178,7 @@ class sqlAcces():
             return ""
         self.con.commit()
         ordres = res.fetchall()
-        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None):
+        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None, None):
             return ""
         ordre = self.convert_fetch_to_dico(ordres[0])
         return ordre
@@ -191,7 +191,7 @@ class sqlAcces():
             return ""
         self.con.commit()
         ordres = res.fetchall()
-        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None):
+        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None, None):
             return ""
         ordre = self.convert_fetch_to_dico(ordres[0])
         return ordre
@@ -221,9 +221,10 @@ class sqlAcces():
         self.con.commit()
 
     def calcul_delta_pour_ajout(self,symbol,last_filled,qtt):
+        FEE = 0.00075
         ecart_dessous = self.get_ecart_bet_from_symbol_and_ID(symbol,last_filled["ID_ecart"]-1)
         delta=float(last_filled["limite"])-float(ecart_dessous[2])
-        benef = delta*last_filled["montant"]-2*0.001*last_filled["montant"]*last_filled["limite"]
+        benef = delta*last_filled["montant"]-2*FEE*last_filled["montant"]*last_filled["limite"]
         prix_reduce = last_filled["limite"]-benef/qtt
         if prix_reduce<0:
             return "NA"
@@ -241,11 +242,12 @@ class sqlAcces():
 
     def add_bet_after_sell(self,symbol,last_filled):
         if last_filled["sens"] == "SELL":
+            ajout_qtt = 4
             current_bet = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-1)[3]
             if int(last_filled["niveau"]) == 1 or int(last_filled["niveau"]) == 2:
-                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+2)
-                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,2)
-                self.calcul_delta_pour_ajout(symbol,last_filled,2)
+                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt)
+                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt)
+                self.calcul_delta_pour_ajout(symbol,last_filled,ajout_qtt)
             elif int(last_filled["niveau"]) == 3:
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+2)
                 self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,2)
@@ -276,6 +278,7 @@ class sqlAcces():
                       "ID_ecart":ordre[10],
                       "niveau":ordre[11],
                       "flag_ajout":ordre[12],
+                      "benefice":ordre[13],
                  }
         return ordre_dico
 
@@ -437,11 +440,93 @@ class sqlAcces():
         self.con.commit()
         epargne = res.fetchall()[0][6]
         return epargne
+    
+    def calcul_benefice(self,symbol,last_filled):
+        FEE=0.00075
+        ecart_bet = self.get_ecart_bet_from_symbol(symbol)
+        ID_ecart_filled = last_filled["ID_ecart"]
+
+        if last_filled["sens"]=="SELL":
+            if last_filled["niveau"] == 1 or last_filled["niveau"] == 2:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                benef=last_filled["montant"]*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
+                self.update_order_benef(last_filled["ID"],str(benef-fee_courant))
+            elif last_filled["niveau"] == 3:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                B1=ecart_bet[ID_ecart_filled-1][1]
+                B2=ecart_bet[ID_ecart_filled-2][1]
+                if int(B1+B2) != int(last_filled["montant"]):
+                    self.tele.send_message("probleme de montant:")
+                    self.tele.send_message("B1: "+str(B1))
+                    self.tele.send_message("B2: "+str(B2))
+                    self.tele.send_message("montant: "+str(last_filled["montant"]))
+                Benef1 = B1*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
+                Benef2 = B2*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled-1][0])
+                self.update_order_benef(last_filled["ID"],str(Benef1+Benef2-fee_courant))
+            elif last_filled["niveau"] == 4:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                B1=ecart_bet[ID_ecart_filled-1][1]
+                B2=ecart_bet[ID_ecart_filled-2][1]
+                B3=ecart_bet[ID_ecart_filled-3][1]
+                if int(B1+B2+B3) != int(last_filled["montant"]):
+                    self.tele.send_message("probleme de montant:")
+                    self.tele.send_message("B1: "+str(B1))
+                    self.tele.send_message("B2: "+str(B2))
+                    self.tele.send_message("B3: "+str(B3))
+                    self.tele.send_message("montant: "+str(last_filled["montant"]))
+                Benef1 = B1*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
+                Benef2 = B2*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled-1][0])
+                Benef3 = B3*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled-2][0])
+                self.update_order_benef(last_filled["ID"],str(Benef1+Benef2+Benef3-fee_courant))
+
+        elif last_filled["sens"]=="BUY":
+            if last_filled["niveau"] == 1 or last_filled["niveau"] == 2:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                self.update_order_benef(last_filled["ID"],str(-fee_courant))
+
+            elif last_filled["niveau"] == 3:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                B1=ecart_bet[ID_ecart_filled][1]        #B1 utilise uniquement pour la verification
+                B2=ecart_bet[ID_ecart_filled+1][1]
+                if int(B1+B2) != int(last_filled["montant"]):
+                    self.tele.send_message("probleme de montant:")
+                    self.tele.send_message("B1: "+str(B1))
+                    self.tele.send_message("B2: "+str(B2))
+                    self.tele.send_message("montant: "+str(last_filled["montant"]))
+                Benef2 = B2 * (ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
+                self.update_order_benef(last_filled["ID"],str(Benef2-fee_courant))
+            
+            elif last_filled["niveau"] == 4:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                B1=ecart_bet[ID_ecart_filled][1]        #B1 utilise uniquement pour la verification
+                B2=ecart_bet[ID_ecart_filled+1][1]
+                B3=ecart_bet[ID_ecart_filled+2][1]
+                if int(B1+B2+B3) != int(last_filled["montant"]):
+                    self.tele.send_message("probleme de montant:")
+                    self.tele.send_message("B1: "+str(B1))
+                    self.tele.send_message("B2: "+str(B2))
+                    self.tele.send_message("B3: "+str(B3))
+                    self.tele.send_message("montant: "+str(last_filled["montant"]))
+                Benef2 = B2 * (ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
+                Benef3 = B3 * (ecart_bet[ID_ecart_filled+2][0]-ecart_bet[ID_ecart_filled][0])
+                self.update_order_benef(last_filled["ID"],str(Benef2+Benef3-fee_courant))
+    
+    def update_order_benef(self,ID,benef):
+        benef_round= str(round(float(benef),8))
+        try:
+            self.cur.execute("UPDATE Ordres SET benefice=? WHERE ID=?",
+                             (benef_round,str(ID)))
+        except sqlite3.IntegrityError as inst:
+            ordre = self.get_order_info_by_ID(ID)
+            self.new_log_error("update_order_benef_SQL",str(inst),ordre["symbol"])
+            return inst
+        retour = self.con.commit()
+        return retour
 
 
 def main():
     sql = sqlAcces()
-    DEVISE='DOGEBTC'
+    DEVISE='XRPEUR'
 
     #sql.add_ajout_to_ecart(DEVISE)
     #print(sql.get_ajout_flag(DEVISE))
@@ -458,10 +543,11 @@ def main():
     #sql.set_ajout("XRPEUR_Ajout.csv")
     #print(sql.get_epargne("XRPEUR"))
     #sql.add_to_ajout("XRPEUR",57,1)
-    lastfilled = sql.get_last_filled_sell("XRPEUR")
+    lastfilled = sql.get_last_filled(DEVISE)
     #for i in range(180):
     #    sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,2,158+2*i)
-    sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,2)
+    sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,4)
+    #sql.calcul_benefice(DEVISE,lastfilled)
 
 
 if __name__ == '__main__':
