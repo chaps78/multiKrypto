@@ -522,6 +522,171 @@ class sqlAcces():
             return inst
         retour = self.con.commit()
         return retour
+    
+    def get_gain_jour(self,symbol,annee,mois,jour):
+        date = str(annee)+"-"+"%02.0f"%mois+"-"+"%02.0f"%jour
+        print(date)
+        try:
+            res = self.cur.execute("SELECT SUM(benefice) FROM Ordres WHERE symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        return ordres[0][0]
+    
+    def get_gain_mois(self,symbol,annee,mois):
+        date = str(annee)+"-"+"%02.0f"%mois
+        try:
+            res = self.cur.execute("SELECT SUM(benefice) FROM Ordres WHERE symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        return ordres[0][0]
+    
+    def min_sell(self,symbol,annee,mois):
+        date = str(annee)+"-"+"%02.0f"%mois
+        try:
+            res = self.cur.execute("SELECT MIN(ID_ecart) FROM Ordres WHERE sens='SELL' AND status='FILLED' AND symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        min_sell = ordres[0][0]
+        print("min sel: "+str(min_sell))
+        return min_sell
+    
+    def max_sell(self,symbol,annee,mois):
+        date = str(annee)+"-"+"%02.0f"%mois
+        try:
+            res = self.cur.execute("SELECT MAX(ID_ecart) FROM Ordres WHERE sens='SELL' AND status='FILLED' AND symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        max_sell = ordres[0][0]
+        return max_sell
+
+    def min_buy(self,symbol,annee,mois):
+        date = str(annee)+"-"+"%02.0f"%mois
+        try:
+            res = self.cur.execute("SELECT MIN(ID_ecart) FROM Ordres WHERE sens='BUY' AND status='FILLED' AND symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        min_sell = ordres[0][0]
+        return min_sell
+    
+    def max_buy(self,symbol,annee,mois):
+        date = str(annee)+"-"+"%02.0f"%mois
+        try:
+            res = self.cur.execute("SELECT MAX(ID_ecart) FROM Ordres WHERE sens='BUY' AND status='FILLED' AND symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        max_buy = ordres[0][0]
+        return max_buy
+
+    def count_sell_ID_ecart(self,symbol,annee,mois,ID_ecart):
+        date = str(annee)+"-"+"%02.0f"%mois
+        try:
+            res = self.cur.execute("SELECT COUNT() FROM Ordres "
+                                   +"WHERE sens='SELL' AND status='FILLED' AND symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
+                                   +" AND niveau<3" )
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        count_1_2 = ordres[0][0]
+        try:
+            res = self.cur.execute("SELECT COUNT() FROM Ordres "
+                                   +"WHERE sens='SELL' AND status='FILLED' AND symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
+                                   +" AND niveau=3" )
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        count_3 = ordres[0][0]
+        try:
+            res = self.cur.execute("SELECT COUNT() FROM Ordres "
+                                   +"WHERE sens='SELL' AND status='FILLED' AND symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
+                                   +" AND niveau=4" )
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        count_4 = ordres[0][0]
+        count=[count_1_2,count_3,count_4]
+        return count
+    
+    def count_buy_ID_ecart(self,symbol,annee,mois,ID_ecart):
+        date = str(annee)+"-"+"%02.0f"%mois
+        try:
+            res = self.cur.execute("SELECT COUNT() FROM Ordres "
+                                   +"WHERE sens='BUY' AND status='FILLED' AND symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
+                                   +" AND niveau<3" )
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        count_1_2 = ordres[0][0]
+        try:
+            res = self.cur.execute("SELECT COUNT() FROM Ordres "
+                                   +"WHERE sens='BUY' AND status='FILLED' AND symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
+                                   +" AND niveau=3" )
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        count_3 = ordres[0][0]
+        try:
+            res = self.cur.execute("SELECT COUNT() FROM Ordres "
+                                   +"WHERE sens='BUY' AND status='FILLED' AND symbol='"
+                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
+                                   +" AND niveau=4" )
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            return ""
+        self.con.commit()
+        ordres = res.fetchall()
+        count_4 = ordres[0][0]
+        count=[count_1_2,count_3,count_4]
+        return count
+    
+    def baisser_niveau_ordre_SQL(self,key,new_niveau):
+        try:
+            self.cur.execute("UPDATE Ordres SET niveau=? WHERE ID=?",
+                             (str(new_niveau),str(key)))
+        except sqlite3.IntegrityError as inst:
+            ordre = self.get_order_info_by_ID(key)
+            self.new_log_error("update_order_benef_SQL",str(inst),ordre["symbol"])
+            return inst
+        retour = self.con.commit()
+        return retour
 
 
 def main():
@@ -537,17 +702,29 @@ def main():
     #sql.add_ajout_to_ecart(DEVISE)
     #print(sql.get_montant_entre_ordres(DEVISE,9,6))
     #print(sql.new_log_debug("ici","message","XRPEUR"))
-    #sql.set_ecart_bet("XRPEUR.csv")
+    #sql.set_ecart_bet("DOGEEUR.csv")
     #print(sql.get_last_filled("XRPEUR"))
     #sql.set_ecart_bet("XRPEUR.csv")
-    #sql.set_ajout("XRPEUR_Ajout.csv")
+    #sql.set_ajout("DOGEEUR_Ajout.csv")
     #print(sql.get_epargne("XRPEUR"))
     #sql.add_to_ajout("XRPEUR",57,1)
-    lastfilled = sql.get_last_filled(DEVISE)
+    #lastfilled = sql.get_last_filled(DEVISE)
     #for i in range(180):
     #    sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,2,158+2*i)
-    sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,4)
+    #sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,4)
     #sql.calcul_benefice(DEVISE,lastfilled)
+    resultat = sql.get_gain_mois("XRPEUR",2024,6)
+    sql.min_sell("XRPEUR",2024,5)
+    sql.max_sell("XRPEUR",2024,5)
+    sql.min_buy("XRPEUR",2024,5)
+    sql.max_buy("XRPEUR",2024,5)
+    sql.count_sell_ID_ecart("XRPEUR",2024,6,157)
+    print("XRPEUR: "+str(resultat))
+    resultat = sql.get_gain_mois("DOGEBTC",2024,6)
+    print("DOGEBTC: "+str(resultat))
+    print("DOGEBTC (EUR): "+str(resultat*62500))
+    resultat = sql.get_gain_mois("DOGEEUR",2024,6)
+    print("DOGEEUR: "+str(resultat))
 
 
 if __name__ == '__main__':

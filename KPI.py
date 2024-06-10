@@ -1,10 +1,12 @@
 from bininterface import binAcces
+from sqlInterface import sqlAcces
 
 
 class Kpi():
 
     def __init__(self):
         self.bin = binAcces()
+        self.sql = sqlAcces()
 
     def reste_sur_limites(self,symbol):
         last_filled = self.bin.sql.get_last_filled(symbol)
@@ -26,35 +28,27 @@ class Kpi():
         self.bin.sql.set_KPI_restes(symbol,ret,last_filled["ID_ecart"])
         return ret
 
-    def calcul_ajout(self,symbol,restes):
-        last_filled = self.bin.sql.get_last_filled(symbol)
-        ecart_bet = self.bin.sql.get_ecart_bet_from_symbol_and_ID(symbol,last_filled["ID_ecart"])
-        benef = restes["devise2"]-self.bin.sql.get_epargne(symbol)
-        breakpoint()
-        if benef>0.00001:
-            devise_percent = self.bin.sql.get_devises_from_symbol(symbol)
-            down = benef*devise_percent["down"]/100
-            local = benef*devise_percent["local"]/100
-            up = benef*devise_percent["up"]/100
-            ajout_local = {}
-            ajout_local[last_filled["ID_ecart"]-2] = (local/5)/ecart_bet[2]
-            ajout_local[last_filled["ID_ecart"]-1] = (local/5)/ecart_bet[2]
-            ajout_local[last_filled["ID_ecart"]] = (local/5)/ecart_bet[2]
-            ajout_local[last_filled["ID_ecart"]+1] = (local/5)/ecart_bet[2]
-            ajout_local[last_filled["ID_ecart"]+2] = (local/5)/ecart_bet[2]
-            print(ajout_local)
-            data_up = self.position_up()
-            for i in range(data_up[1]):
-                ajout_local[data_up[0]+i]=up/data_up[1]
-            self.bin.sql.set_ajout_tab(symbol,ajout_local)
-        else:
-            print("pas de benef")
+    def stat_mois(self,symbol,annee,mois):
+        min=self.sql.min_buy(symbol,annee,mois)
+        max=self.sql.max_sell(symbol,annee,mois)
+        result={}
+        while min<max:
+            result_inter={}
+            result_inter["BUY"]=self.sql.count_buy_ID_ecart(symbol,annee,mois,min)
+            result_inter["SELL"]=self.sql.count_sell_ID_ecart(symbol,annee,mois,min)
+            result[min]=result_inter
+            min+=1
+        keys = result.keys()
+        for key in keys:
+            print(str(key)+":BUY:"
+                  +str(result[key]["BUY"][0])
+                  +":"+str(result[key]["BUY"][1])
+                  +":"+str(result[key]["BUY"][2])
+                  +":SELL:"
+                  +str(result[key]["SELL"][0])
+                  +":"+str(result[key]["SELL"][1])
+                  +":"+str(result[key]["SELL"][2]))
 
-    def position_up(self):
-        ### TODO a penser #######
-        position = 60
-        largeur = 2
-        return [position,largeur]
 
 
 
@@ -68,9 +62,10 @@ def main():
 
     #current_reste = kpi.reste_sur_limites(DEVISE)
     #print(current_reste)
-    last_restes = kpi.bin.sql.get_last_reste(DEVISE)
-    print(last_restes)
-    kpi.calcul_ajout(DEVISE,last_restes)
+    #last_restes = kpi.bin.sql.get_last_reste(DEVISE)
+    #print(last_restes)
+    #kpi.calcul_ajout(DEVISE,last_restes)
+    kpi.stat_mois("XRPEUR",2024,6)
 
 
 

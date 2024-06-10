@@ -141,79 +141,6 @@ class Basics():
                                   last_filled_order_sell["ID_ecart"]+1,
                                   0)
 
-
-
-
-    def verification_2_ordres(self,symbol):
-        changement = self.bin.changement_status(symbol)
-        nbr_filled = 0
-        for el in changement:
-            if el["status"] == self.bin.client.ORDER_STATUS_FILLED:
-                nbr_filled +=1
-            self.sql.new_log_debug("verification_2_ordres_changement_identifie",str(changement),symbol)
-        if nbr_filled == 1:
-            self.bin.changement_update(changement,symbol)
-            for ordre in changement:
-                if ordre["status"] == self.bin.client.ORDER_STATUS_PARTIALLY_FILLED:
-                    self.sql.new_log_debug("verification_2_ordres_status_partial",str(ordre),symbol)
-                    sens = self.sql.get_order_info_by_ID(ordre["ID"])["sens"]
-                    if sens == self.bin.client.SIDE_BUY:
-                        self.bin.new_market_order(symbol,ordre["executedQty"],self.bin.client.SIDE_SELL)
-                    if sens == self.bin.client.SIDE_SELL:
-                        self.bin.new_market_order(symbol,ordre["executedQty"],self.bin.client.SIDE_BUY)
-            ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
-            for odb in ordres_ouverts:
-                self.bin.cancel_order(odb["ID"])
-            last_filled_order = self.sql.get_last_filled(symbol)
-            self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
-            self.bin.new_achat(symbol,last_filled_order["ID_ecart"])
-            self.bin.new_vente(symbol,last_filled_order["ID_ecart"])
-            self.kpi.reste_sur_limites(symbol)
-        elif nbr_filled == 2:
-            self.sql.new_log_debug("Double vente",str(changement),symbol)
-            self.bin.changement_update(changement,symbol)
-            last_filled_order = self.sql.get_last_filled(symbol)
-
-            ordre_1 = self.sql.get_order_info_by_ID(changement[0]["orderId"])
-            ordre_2 = self.sql.get_order_info_by_ID(changement[1]["orderId"])
-            if ordre_1["sens"] == self.bin.client.SIDE_BUY:
-                ordre_buy=ordre_1
-                ordre_sell=ordre_2
-            else:
-                ordre_buy=ordre_2
-                ordre_sell=ordre_1
-
-            montant_interval = self.sql.get_montant_entre_ordres(symbol,ordre_1["ID_ecart"],ordre_2["ID_ecart"])
-            bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ordre_buy["ID_ecart"]-1)
-            self.bin.new_limite_order(symbol,
-                                  bet_ecart[3]+montant_interval,
-                                  bet_ecart[2],
-                                  self.bin.client.SIDE_BUY,
-                                  ordre_buy["ID_ecart"]-1,
-                                  0)
-
-            bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ordre_sell["ID_ecart"]+1)
-            self.bin.new_limite_order(symbol,
-                                  bet_ecart[3]+montant_interval,
-                                  bet_ecart[2],
-                                  self.bin.client.SIDE_SELL,
-                                  ordre_sell["ID_ecart"]+1,
-                                  0)
-            #self.bin.new_achat(symbol,last_filled_order["ID_ecart"])
-            #self.bin.new_vente(symbol,last_filled_order["ID_ecart"])
-#            self.kpi.reste_sur_limites(symbol)
-
-        if changement == []:
-            ajout_flag = self.sql.get_ajout_flag(symbol)
-            last_filled_order = self.sql.get_last_filled(symbol)
-            if ajout_flag == 1:
-                ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
-                if ordres_ouverts[0]["flag_ajout"] == 0:
-                    for odb in ordres_ouverts:
-                        self.bin.cancel_order(odb["ID"])
-                    self.bin.new_achat(symbol,last_filled_order["ID_ecart"],flag_ajout=1)
-                    self.bin.new_vente(symbol,last_filled_order["ID_ecart"],flag_ajout=1)
-
     def verification_niveau_VS_timer(self,symbol):
         niveaux = self.sql.get_time_since_open(symbol)
         keys = niveaux.keys()
@@ -226,6 +153,10 @@ class Basics():
             if int(niveaux[key]["niveau"]) == 3 and niveaux[key]["time"].seconds > 10800:
                 self.tele.send_message("baisse de niveau 3 a 1")
                 self.bin.baisser_niveau_ordre(key)
+            # Delas d attente de 3 heures pour un ordre de niveau 2
+            if int(niveaux[key]["niveau"]) == 2 and niveaux[key]["time"].seconds > 10800:
+                self.tele.send_message("baisse de niveau 2 a 1")
+                self.sql.baisser_niveau_ordre_SQL(key,1)
 
 ###########################################################################
 #                                 MAIN                                    #
