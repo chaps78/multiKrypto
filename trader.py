@@ -52,6 +52,7 @@ class Basics():
             else:
                 ID_ecart_last_close = self.plus_proche(symbol)
             print(ID_ecart_last_close)
+            #breakpoint()
             self.bin.new_vente(symbol,ID_ecart_last_close)
             self.bin.new_achat(symbol,ID_ecart_last_close)
 
@@ -86,7 +87,7 @@ class Basics():
             elif len(ordres_DB) > 2 :
                 self.sql.new_log_error("verification_2_ordres_V2_trader","probleme de trade", symbol)
         except Exception as inst:
-            self.sql.new_log_debug("get_ajout_entier_dic_SQL",str(inst),symbol)
+            self.sql.new_log_debug("Ordres V2",str(inst),symbol)
             return inst
 
     def un_ordre_filled_autre_new(self,ordres_ouvert,symbol):
@@ -103,14 +104,15 @@ class Basics():
         self.kpi.reste_sur_limites(symbol)
 
     def un_ordre_filled_autre_partial(self,ordres_partiel,symbol):
-        keys = ordres_partiel.keys()
-        for key in keys:
-            self.bin.cancel_order(ordres_partiel[key]["ID"])
-            sens = ordres_partiel[key]["sens"]
+        #breakpoint()
+        #keys = ordres_partiel.keys()
+        for ordre in ordres_partiel:
+            self.bin.cancel_order(ordre["ID"])
+            sens = ordre["sens"]
             if sens == self.bin.client.SIDE_BUY:
-                self.bin.new_market_order(symbol,ordres_partiel[key]["executedQty"],self.bin.client.SIDE_SELL)
+                self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_SELL)
             if sens == self.bin.client.SIDE_SELL:
-                self.bin.new_market_order(symbol,ordres_partiel[key]["executedQty"],self.bin.client.SIDE_BUY)
+                self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_BUY)
             self.bin.new_market_order
         last_filled_order = self.sql.get_last_filled(symbol)
         self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
@@ -150,7 +152,7 @@ class Basics():
                 self.tele.send_message("baisse de niveau 4 a 3")
                 self.bin.baisser_niveau_ordre(key)
             # Delas d attente de 3 heures pour un ordre de niveau 3
-            if int(niveaux[key]["niveau"]) == 3 and niveaux[key]["time"].seconds > 10800:
+            if int(niveaux[key]["niveau"]) == 3 and niveaux[key]["time"].seconds > 7200:
                 self.tele.send_message("baisse de niveau 3 a 1")
                 self.bin.baisser_niveau_ordre(key)
             # Delas d attente de 3 heures pour un ordre de niveau 2
@@ -170,7 +172,7 @@ def main():
     ################################################
     basic.tele.send_message("Bonjour")
     #for DEVISE in DEVISES:
-    #    basic.initialise(DEVISE)
+    #basic.initialise("XRPEUR")
     #    time.sleep(3)
     while True:
         for DEVISE in DEVISES:

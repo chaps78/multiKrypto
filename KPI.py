@@ -11,7 +11,12 @@ class Kpi():
     def reste_sur_limites(self,symbol):
         last_filled = self.bin.sql.get_last_filled(symbol)
         devises=self.bin.sql.get_devises_from_symbol(symbol)
-        founds = self.bin.get_found([devises["devise1"],devises["devise2"]],symbol)
+        #founds = self.bin.get_found([devises["devise1"],devises["devise2"]],symbol)
+        founds = self.bin.get_found(["XRP","EUR","BTC","DOGE"],symbol)
+        XRPEUR_Price = float(self.bin.get_price("XRPEUR")["price"])
+        DOGEEUR_Price = float(self.bin.get_price("DOGEEUR")["price"])
+        BTCEUR_Price = float(self.bin.get_price("BTCEUR")["price"])
+        total = founds["EUR"] + founds["XRP"] * XRPEUR_Price + founds["DOGE"] * DOGEEUR_Price + founds["BTC"] * BTCEUR_Price
         devise1 = founds[devises["devise1"]]
         devise2 = founds[devises["devise2"]]
         ecart_bet_dic = self.bin.sql.get_ecart_bet_from_symbol(symbol)
@@ -25,7 +30,18 @@ class Kpi():
             ID_ecart_courant -= 1
             devise2 -= ecart_bet_dic[ID_ecart_courant][1]*ecart_bet_dic[ID_ecart_courant][0]
         ret=[devise1,devise2]
-        self.bin.sql.set_KPI_restes(symbol,ret,last_filled["ID_ecart"])
+        self.bin.sql.set_KPI_restes(symbol
+                                    ,ret
+                                    ,last_filled["ID_ecart"]
+                                    ,founds["EUR"]
+                                    ,founds["XRP"]
+                                    ,XRPEUR_Price
+                                    ,founds["DOGE"]
+                                    ,DOGEEUR_Price
+                                    ,founds["BTC"]
+                                    ,BTCEUR_Price
+                                    ,total
+                                    )
         return ret
 
     def stat_mois(self,symbol,annee,mois):
@@ -60,12 +76,13 @@ def main():
     DEVISE="XRPEUR"
     kpi = Kpi()
 
-    #current_reste = kpi.reste_sur_limites(DEVISE)
-    #print(current_reste)
-    #last_restes = kpi.bin.sql.get_last_reste(DEVISE)
-    #print(last_restes)
-    #kpi.calcul_ajout(DEVISE,last_restes)
+    print("\nXRPEUR:\n")
     kpi.stat_mois("XRPEUR",2024,6)
+    print("\nDOGEEUR:\n")
+    kpi.stat_mois("DOGEEUR",2024,6)
+    print("\nDOGEBTC:\n")
+    kpi.stat_mois("DOGEBTC",2024,6)
+    #kpi.reste_sur_limites("XRPEUR")
 
 
 

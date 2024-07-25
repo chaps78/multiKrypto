@@ -155,11 +155,12 @@ class sqlAcces():
         #Idealement renvoyer un dictionnaire au lieu du tableau
         ###############
         ret = res.fetchall()
+        #breakpoint()
         return ret[0]
 
     def get_last_filled(self,symbol):
         try:
-            res = self.cur.execute("SELECT *, MAX(date_debut) FROM Ordres WHERE status='FILLED' AND symbol='"+str(symbol)+"'")
+            res = self.cur.execute("SELECT *, MAX(date_debut) FROM Ordres WHERE status='FILLED' AND type='LIMIT' AND symbol='"+str(symbol)+"'")
         except sqlite3.IntegrityError as inst:
             self.new_log_error("get_last_filled_SQL",str(inst),symbol)
             return ""
@@ -220,12 +221,13 @@ class sqlAcces():
             return inst
         self.con.commit()
 
-    def calcul_delta_pour_ajout(self,symbol,last_filled,qtt):
+    def calcul_delta_pour_ajout(self,symbol,last_filled,qtt_init):
+        qtt = qtt_init
         FEE = 0.00075
         ecart_dessous = self.get_ecart_bet_from_symbol_and_ID(symbol,last_filled["ID_ecart"]-1)
         delta=float(last_filled["limite"])-float(ecart_dessous[2])
         benef = delta*last_filled["montant"]-2*FEE*last_filled["montant"]*last_filled["limite"]
-        prix_reduce = last_filled["limite"]-benef/qtt
+        prix_reduce = (last_filled["limite"]-benef/qtt_init)*qtt_init/qtt
         if prix_reduce<0:
             return "NA"
         ecart_tab = self.get_ecart_bet_from_symbol(symbol)
@@ -242,7 +244,7 @@ class sqlAcces():
 
     def add_bet_after_sell(self,symbol,last_filled):
         if last_filled["sens"] == "SELL":
-            ajout_qtt = 4
+            ajout_qtt = 6
             current_bet = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-1)[3]
             if int(last_filled["niveau"]) == 1 or int(last_filled["niveau"]) == 2:
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt)
@@ -312,10 +314,22 @@ class sqlAcces():
                             "up":devises[5]}
         return(formated_devises)
 
-    def set_KPI_restes(self,symbol,restes,last_ID):
+    def set_KPI_restes(self,symbol,restes,last_ID,EUR,XRP,XRP_Prix,DOGE,DOGE_Prix,BTC,BTC_Prix,Total):
         try:
-            self.cur.execute("INSERT INTO reste VALUES(?,?,?,?,?)",
-                                 (datetime.now(timezone.utc),symbol,restes[0],restes[1],int(last_ID)))
+            self.cur.execute("INSERT INTO reste VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                                 (datetime.now(timezone.utc)
+                                  ,symbol,restes[0]
+                                  ,restes[1]
+                                  ,int(last_ID)
+                                  ,float(EUR)
+                                  ,float(XRP)
+                                  ,float(XRP_Prix)
+                                  ,float(DOGE)
+                                  ,float(DOGE_Prix)
+                                  ,float(BTC)
+                                  ,float(BTC_Prix)
+                                  ,float(Total)
+                                  ))
         except sqlite3.IntegrityError as inst:
             self.new_log_error("set_KPI_restes_SQL",str(inst),symbol)
             return inst
@@ -688,6 +702,28 @@ class sqlAcces():
         retour = self.con.commit()
         return retour
 
+    def arrangement_DB(self,symbol):
+        tab = {185:-10,
+               186:-10,
+               187:-10,
+               188:10,
+               189:10,
+               190:10,
+               191:10,
+               192:10,
+               193:10,
+               194:3}
+        keys = tab.keys()
+        for key in keys:
+            print(key)
+            print(self.get_ajout_reel_by_ID(symbol,key))
+            bet = self.get_ecart_bet_from_symbol_and_ID(symbol,key)[3]
+            new_bet = bet + tab[key]
+            print(bet)
+            print(new_bet)
+            self.update_bet_with_ID(symbol,key,new_bet)
+            #self.add_to_ajout(symbol,key,tab[key])
+            #self
 
 def main():
     sql = sqlAcces()
@@ -713,18 +749,24 @@ def main():
     #    sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,2,158+2*i)
     #sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,4)
     #sql.calcul_benefice(DEVISE,lastfilled)
-    resultat = sql.get_gain_mois("XRPEUR",2024,6)
+
+    resultat = sql.get_gain_mois("XRPEUR",2024,7)
     sql.min_sell("XRPEUR",2024,5)
     sql.max_sell("XRPEUR",2024,5)
     sql.min_buy("XRPEUR",2024,5)
     sql.max_buy("XRPEUR",2024,5)
-    sql.count_sell_ID_ecart("XRPEUR",2024,6,157)
+    sql.count_sell_ID_ecart("XRPEUR",2024,7,157)
     print("XRPEUR: "+str(resultat))
-    resultat = sql.get_gain_mois("DOGEBTC",2024,6)
+    total = resultat
+    resultat = sql.get_gain_mois("DOGEBTC",2024,7)
     print("DOGEBTC: "+str(resultat))
-    print("DOGEBTC (EUR): "+str(resultat*62500))
-    resultat = sql.get_gain_mois("DOGEEUR",2024,6)
+    print("DOGEBTC (EUR): "+str(resultat*60000))
+    total += resultat*60000
+    resultat = sql.get_gain_mois("DOGEEUR",2024,7)
     print("DOGEEUR: "+str(resultat))
+    total += resultat
+    print("total: "+str(total))
+    #sql.arrangement_DB("XRPEUR")
 
 
 if __name__ == '__main__':
