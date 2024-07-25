@@ -67,6 +67,15 @@ class Basics():
             if len(ordres_DB) ==1 :
                 if len(ordres_new) == 1:
                     last_filled = self.sql.get_last_filled(symbol)
+                    if last_filled["sens"] == "BUY" and last_filled["flag_ajout"]>0:
+                        ID_to_UP = self.sql.get_ID_to_UP(symbol,last_filled["ID_ecart"])
+                        devises = self.sql.get_devises_from_symbol(symbol)
+                        UP = devises["up"]
+                        #Positionner le UP
+                        self.sql.add_to_ajout(symbol,ID_to_UP,UP)
+                        self.sql.add_to_ecart(symbol,ID_to_UP,UP)
+                        #Retirer de ecart_bet
+                        self.sql.set_up_bet(symbol,last_filled["ID_ecart"],0)
                     self.sql.calcul_benefice(symbol,last_filled)
                     self.sql.add_bet_after_sell(symbol,last_filled)
                     self.tele.send_message("FILLED "+symbol+" :"+str(last_filled["sens"])+"\n"+str(last_filled["montant_execute"]))

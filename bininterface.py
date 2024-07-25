@@ -14,15 +14,13 @@ class binAcces():
 
     def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,niveau=1):
         try:
-            #breakpoint()
             response = self.client.create_order(symbol=symbol, 
                                             side=sens, 
                                             type=Client.ORDER_TYPE_LIMIT, 
-                                            quantity='%.8f' % montant, 
+                                            quantity='%.8f' % (montant+flag_ajout), 
                                             price='%.8f' % limite,
                                             timeInForce='GTC')
         except Exception as inst:
-            #breakpoint()
             self.sql.new_log_error("new_limite_order_Binance",str(inst),symbol)
             return ""
         
@@ -45,7 +43,7 @@ class binAcces():
     ###############################
     def new_achat(self,symbol,ID_ecart,flag_ajout=0):
         last_ordre = self.sql.get_last_filled(symbol)
-        #breakpoint()
+        UP = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart):
         if last_ordre != "":
             if last_ordre["sens"]== Client.SIDE_SELL:
                 bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
@@ -59,7 +57,7 @@ class binAcces():
                                     bet_ecart[2],
                                     Client.SIDE_BUY,
                                     ID_ecart-1,
-                                    flag_ajout)
+                                    UP)
             else:
                 if int(last_ordre["niveau"])==1:
                     bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
@@ -73,7 +71,7 @@ class binAcces():
                                         bet_ecart[2],
                                         Client.SIDE_BUY,
                                         ID_ecart-1,
-                                        flag_ajout,
+                                        UP,
                                         2)
                 
                 elif int(last_ordre["niveau"])==2:
