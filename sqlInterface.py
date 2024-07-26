@@ -287,13 +287,13 @@ class sqlAcces():
         retour = self.con.commit()
         return retour
     
-    def ajout_up_bet(self,symbol,ID,qtt):
+    def set_up_bet(self,symbol,ID,qtt):
         try:
             self.cur.execute("UPDATE ecart_bet SET UP=? WHERE symbol=? AND ID=?",
                              (qtt,symbol,ID))
         except sqlite3.IntegrityError as inst:
             ordre = self.get_order_info_by_ID(ID)
-            self.new_log_error("ajout_up_bet",str(inst),ordre["symbol"])
+            self.new_log_error("set_up_bet_SQL",str(inst),ordre["symbol"])
             return inst
         retour = self.con.commit()
         return retour
@@ -319,7 +319,7 @@ class sqlAcces():
                     self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt)
                     self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt)
                     self.ajout_benef_paire_devise(symbol,(benef_ratio-ajout_qtt-UP)*last_filled["limite"])
-                    self.ajout_up_bet(symbol,int(last_filled["ID_ecart"])-1,UP)
+                    self.set_up_bet(symbol,int(last_filled["ID_ecart"])-1,UP)
             elif int(last_filled["niveau"]) == 3:
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+2)
                 self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,2)
@@ -823,7 +823,7 @@ def main():
     #sql.calcul_benefice(DEVISE,lastfilled)
 
     #resultat = sql.get_gain_mois("XRPEUR",2024,7)
-    """
+    
     sql.min_sell("XRPEUR",2024,5)
     sql.max_sell("XRPEUR",2024,5)
     sql.min_buy("XRPEUR",2024,5)
@@ -839,14 +839,14 @@ def main():
     print("DOGEEUR: "+str(resultat))
     total += resultat
     print("total: "+str(total))
-    #sql.arrangement_DB("XRPEUR")"""
+    #sql.arrangement_DB("XRPEUR")
     #sql.ajout_up_bet("XRPEUR",30,5)
     #last_filled = sql.get_last_filled("XRPEUR")
     #print(last_filled)
     #sql.get_calcul_benef_with_ID("XRPEUR",172)
     #sql.get_ID_to_UP("XRPEUR",172)
-    sql.add_to_ajout("XRPEUR",172,8)
-    sql.add_to_ecart("XRPEUR",172,8)
+    #sql.add_to_ajout("XRPEUR",172,8)
+    #sql.add_to_ecart("XRPEUR",172,8)
 
 if __name__ == '__main__':
      main()

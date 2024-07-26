@@ -14,10 +14,14 @@ class binAcces():
 
     def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,niveau=1):
         try:
+            if sens=="BUY":
+                ajout = flag_ajout[4]
+            else:
+                ajout = 0
             response = self.client.create_order(symbol=symbol, 
                                             side=sens, 
                                             type=Client.ORDER_TYPE_LIMIT, 
-                                            quantity='%.8f' % (montant+flag_ajout), 
+                                            quantity='%.8f' % (montant+ajout), 
                                             price='%.8f' % limite,
                                             timeInForce='GTC')
         except Exception as inst:
@@ -43,7 +47,7 @@ class binAcces():
     ###############################
     def new_achat(self,symbol,ID_ecart,flag_ajout=0):
         last_ordre = self.sql.get_last_filled(symbol)
-        UP = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart):
+        UP = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)
         if last_ordre != "":
             if last_ordre["sens"]== Client.SIDE_SELL:
                 bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
