@@ -14,8 +14,12 @@ class binAcces():
 
     def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,niveau=1):
         try:
+            breakpoint()
             if sens=="BUY":
-                ajout = flag_ajout
+                if type(flag_ajout)==tuple:
+                    ajout = flag_ajout[4]
+                else:
+                    ajout = flag_ajout
             else:
                 ajout = 0
             response = self.client.create_order(symbol=symbol, 
@@ -49,6 +53,7 @@ class binAcces():
     def new_achat(self,symbol,ID_ecart,flag_ajout=0):
         last_ordre = self.sql.get_last_filled(symbol)
         UP = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)
+        breakpoint()
         if last_ordre != "":
             if last_ordre["sens"]== Client.SIDE_SELL:
                 bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
@@ -130,7 +135,7 @@ class binAcces():
     ###############################
     def new_vente(self,symbol,ID_ecart,flag_ajout=0):
         last_ordre = self.sql.get_last_filled(symbol)
-        #breakpoint()
+        breakpoint()
         if last_ordre != "":
             if last_ordre["sens"]== Client.SIDE_BUY:
                 bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
