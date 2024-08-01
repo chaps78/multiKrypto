@@ -25,6 +25,7 @@ class binAcces():
                                             price='%.8f' % limite,
                                             timeInForce='GTC')
         except Exception as inst:
+            breakpoint()
             self.sql.new_log_error("new_limite_order_Binance",str(inst),symbol)
             return ""
         

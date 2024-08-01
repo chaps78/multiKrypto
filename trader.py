@@ -63,8 +63,8 @@ class Basics():
             ordres_new = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
             ordres_partial = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_PARTIALLY_FILLED,symbol)
             ordres_DB = ordres_partial + ordres_new
-
             if len(ordres_DB) ==1 :
+                breakpoint()
                 if len(ordres_new) == 1:
                     last_filled = self.sql.get_last_filled(symbol)
                     if last_filled["sens"] == "BUY" and last_filled["flag_ajout"]>0:
@@ -89,6 +89,7 @@ class Basics():
                     self.un_ordre_filled_autre_partial(ordres_partial,symbol)
                     # un ordre ferme et l autre partialy FILLED
             elif len(ordres_DB) == 0 :
+                breakpoint()
                 self.tele.send_message("deux ordres clos en meme temps")
                 self.sql.new_log_debug("verification_2_ordres_V2","deux ordres FILLED : "+str(ordres_DB),symbol)
                 self.deux_ordres_filled(symbol)
@@ -100,6 +101,7 @@ class Basics():
             return inst
 
     def un_ordre_filled_autre_new(self,ordres_ouvert,symbol):
+        breakpoint()
         for ordre_ouvert in ordres_ouvert:
             self.bin.cancel_order(ordre_ouvert["ID"])
         last_filled_order = self.sql.get_last_filled(symbol)
