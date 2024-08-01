@@ -130,7 +130,7 @@ class binAcces():
     ###############################
     def new_vente(self,symbol,ID_ecart,flag_ajout=0):
         last_ordre = self.sql.get_last_filled(symbol)
-        #breakpoint()
+        breakpoint()
         if last_ordre != "":
             if last_ordre["sens"]== Client.SIDE_BUY:
                 bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
