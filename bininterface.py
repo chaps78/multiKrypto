@@ -15,7 +15,7 @@ class binAcces():
     def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,niveau=1):
         try:
             if sens=="BUY":
-                ajout = flag_ajout[4]
+                ajout = flag_ajout
             else:
                 ajout = 0
             response = self.client.create_order(symbol=symbol, 
@@ -25,7 +25,7 @@ class binAcces():
                                             price='%.8f' % limite,
                                             timeInForce='GTC')
         except Exception as inst:
-            breakpoint()
+            #breakpoint()
             self.sql.new_log_error("new_limite_order_Binance",str(inst),symbol)
             return ""
         
@@ -130,7 +130,7 @@ class binAcces():
     ###############################
     def new_vente(self,symbol,ID_ecart,flag_ajout=0):
         last_ordre = self.sql.get_last_filled(symbol)
-        breakpoint()
+        #breakpoint()
         if last_ordre != "":
             if last_ordre["sens"]== Client.SIDE_BUY:
                 bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)

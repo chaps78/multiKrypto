@@ -223,7 +223,7 @@ class sqlAcces():
     def add_to_ecart(self,symbol,ID_ecart,valeur_to_add):
         try:
             curent_value = self.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)[3]
-            breakpoint()
+            #breakpoint()
             valeur_to_update = curent_value + valeur_to_add
             self.cur.execute("UPDATE ecart_bet SET bet="+str(valeur_to_update)+" WHERE ID="+str(ID_ecart)+" AND symbol='"+symbol+"'")
         except sqlite3.IntegrityError as inst:
