@@ -29,16 +29,6 @@ class binAcces():
         self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart,flag_ajout,niveau)
         return response["orderId"]
     
-    def get_ajout_for_achat_order(self,symbol,flag_ajout,ID_ecart):
-        ajout = 0.0
-        if flag_ajout == 1:
-            ajout_dico = self.sql.get_ajout_entier_dic(symbol)
-            keys = ajout_dico.keys()
-            for key in keys:
-                if key > ID_ecart:
-                    ajout += ajout_dico[key]
-
-        return ajout
 
     ###############################
     #donner l ID du dernier FILLED (clos)

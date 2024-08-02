@@ -94,10 +94,6 @@ class Basics():
         for ordre_ouvert in ordres_ouvert:
             self.bin.cancel_order(ordre_ouvert["ID"])
         last_filled_order = self.sql.get_last_filled(symbol)
-        ############## pour les ajouts progressifs #######################
-        if int(last_filled_order["flag_ajout"]) == 1:
-            self.sql.new_log_debug("verification_2_ordres_flag_ordre_ON",str(ordres_ouvert),symbol)
-        ##################################################################
         self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
         self.bin.new_achat(symbol,last_filled_order["ID_ecart"])
         self.bin.new_vente(symbol,last_filled_order["ID_ecart"])

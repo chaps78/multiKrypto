@@ -240,16 +240,54 @@ class sqlAcces():
         self.add_to_ajout(symbol,int(ID_down),-qtt)
         self.update_bet_with_ID(symbol,ID_down,ecart_tab[ID_down][1]-qtt)
         return ID_down
-
+    
+    def ajout_benef_paire_devise(self,symbol,qtt):
+        epargne = self.get_devises_from_symbol(symbol)["epargne"]
+        try:
+            self.cur.execute("UPDATE Devises SET epargne=? WHERE symbol=?",
+                             (qtt+epargne,symbol))
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("ajout_benef_paire_devise",str(inst),symbol)
+            return inst
+        retour = self.con.commit()
+        return retour
+    
+    def ajout_up_bet(self,symbol,ID,qtt):
+        try:
+            self.cur.execute("UPDATE ecart_bet SET UP=? WHERE symbol=? AND ID=?",
+                             (qtt,symbol,ID))
+        except sqlite3.IntegrityError as inst:
+            ordre = self.get_order_info_by_ID(ID)
+            self.new_log_error("ajout_up_bet",str(inst),ordre["symbol"])
+            return inst
+        retour = self.con.commit()
+        return retour
 
     def add_bet_after_sell(self,symbol,last_filled):
         if last_filled["sens"] == "SELL":
-            ajout_qtt = 6
+            infos_devise = self.get_devises_from_symbol(symbol)
+            ajout_qtt = infos_devise["local"]
+            UP = infos_devise["up"]
             current_bet = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-1)[3]
             if int(last_filled["niveau"]) == 1 or int(last_filled["niveau"]) == 2:
-                self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt)
-                self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt)
-                self.calcul_delta_pour_ajout(symbol,last_filled,ajout_qtt)
+                benef = self.calcul_benef(symbol,last_filled)
+                benef_ratio = benef/last_filled["limite"]
+                if benef_ratio < ajout_qtt:
+                    self.tele.send_message("vente avec benef_ratio < ajout_qtt " + str(benef_ratio))
+                    self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt)
+                    self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt)
+                    self.calcul_delta_pour_ajout(symbol,last_filled,ajout_qtt)
+                elif benef_ratio >= ajout_qtt and benef_ratio <= (ajout_qtt + UP):
+                    self.tele.send_message("vente avec benef_ratio > ajout_qtt " + str(benef_ratio))
+                    self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt)
+                    self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt)
+                    self.ajout_benef_paire_devise(symbol,(benef_ratio-ajout_qtt)*last_filled["limite"])
+                else:
+                    self.tele.send_message("vente avec benef_ratio > ajout_qtt + UP " + str(benef_ratio))
+                    self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt)
+                    self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt)
+                    self.ajout_benef_paire_devise(symbol,(benef_ratio-ajout_qtt-UP)*last_filled["limite"])
+                    self.ajout_up_bet(symbol,int(last_filled["ID_ecart"])-1,UP)
             elif int(last_filled["niveau"]) == 3:
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+2)
                 self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,2)
@@ -311,7 +349,9 @@ class sqlAcces():
                             "devise2":devises[2],
                             "down":devises[3],
                             "local":devises[4],
-                            "up":devises[5]}
+                            "up":devises[5],
+                            "epargne":devises[6]
+                            }
         return(formated_devises)
 
     def set_KPI_restes(self,symbol,restes,last_ID,EUR,XRP,XRP_Prix,DOGE,DOGE_Prix,BTC,BTC_Prix,Total):
@@ -749,7 +789,7 @@ def main():
     #    sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,2,158+2*i)
     #sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,4)
     #sql.calcul_benefice(DEVISE,lastfilled)
-
+    """
     resultat = sql.get_gain_mois("XRPEUR",2024,7)
     sql.min_sell("XRPEUR",2024,5)
     sql.max_sell("XRPEUR",2024,5)
@@ -766,8 +806,13 @@ def main():
     print("DOGEEUR: "+str(resultat))
     total += resultat
     print("total: "+str(total))
-    #sql.arrangement_DB("XRPEUR")
-
+    #sql.arrangement_DB("XRPEUR")"""
+    sql.ajout_benef_paire_devise("XRPEUR",2.4)
+    infos_devise = sql.get_devises_from_symbol("DOGEEUR")
+    ajout_qtt = infos_devise["local"]
+    UP = infos_devise["up"]
+    print(ajout_qtt)
+    print(UP)
 
 if __name__ == '__main__':
      main()
