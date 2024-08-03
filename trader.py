@@ -109,7 +109,6 @@ class Basics():
                 self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_SELL)
             if sens == self.bin.client.SIDE_SELL:
                 self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_BUY)
-            self.bin.new_market_order
         last_filled_order = self.sql.get_last_filled(symbol)
         self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
 

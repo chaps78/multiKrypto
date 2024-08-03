@@ -15,6 +15,14 @@ class binAcces():
     def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,niveau=1):
         try:
             #breakpoint()
+            UP = 0
+            if sens == self.client.SIDE_BUY and (niveau==1 or niveau == 2):
+                ecart_bet = self.sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
+                UP = int(ecart_bet[4])
+                if UP >0:
+                    montant += UP
+                    self.tele.send_message("Un ordre ouvert avec un ajout pour le UP d'un montant de : "+str(UP))
+
             response = self.client.create_order(symbol=symbol, 
                                             side=sens, 
                                             type=Client.ORDER_TYPE_LIMIT, 
@@ -26,7 +34,7 @@ class binAcces():
             self.sql.new_log_error("new_limite_order_Binance",str(inst),symbol)
             return ""
         
-        self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart,flag_ajout,niveau)
+        self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart,UP,niveau)
         return response["orderId"]
     
 
@@ -226,14 +234,21 @@ class binAcces():
             change = []
             for ob in orders_Binance:
                 ordre = self.sql.get_order_info_by_ID(ob["orderId"])
-#                if ordre == {}:
-#                    self.sql.new_log_error("changement_status_Binance",
-#                                           "ordre binance non present en DB : "+str(ob["orderId"]),
-#                                           symbol)
+
                 for odb in ordres_DB:
                     if ob["orderId"] == odb["ID"]:
                         if ob["status"] != odb["status"]:
                             change.append({"orderId":ob["orderId"],"status":ob["status"],"executedQty":ob["executedQty"]})
+                            if odb["flag_ajout"] > 0:
+                                self.sql.tele.send_message("un ordre avec UP a ete execute")
+                                self.sql.set_up_bet(symbol,odb["ID_ecart"],0)
+                                ID_to_UP = self.sql.get_ID_to_UP(symbol,odb["ID_ecart"])
+                                self.sql.add_to_ajout(symbol,ID_to_UP,odb["flag_ajout"])
+                                self.sql.add_to_ecart(symbol,ID_to_UP,odb["flag_ajout"])
+
+                                #mettre UP dans ecart _ bet à 0
+                                #ajouter le UP dans le graph
+
         except Exception as inst:
             self.sql.new_log_error("changement_status_Binance",str(inst),symbol)
             time.sleep(60)
