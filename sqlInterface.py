@@ -111,8 +111,8 @@ class sqlAcces():
         try:
             for ligne in lines:
                 tab_ligne = ligne.split(",")
-                self.cur.execute("INSERT INTO ecart_bet VALUES(?,?,?,?)",
-                                 (tab_ligne[0],tab_ligne[1],float(tab_ligne[2]),tab_ligne[3]))
+                self.cur.execute("INSERT INTO ecart_bet VALUES(?,?,?,?,?)",
+                                 (tab_ligne[0],tab_ligne[1],float(tab_ligne[2]),tab_ligne[3],0))
         except Exception as inst:
             self.new_log_error("set_ecart_bet_SQL",str(inst),"NA")
         self.con.commit()
@@ -253,9 +253,11 @@ class sqlAcces():
         return retour
     
     def ajout_up_bet(self,symbol,ID,qtt):
+        ecart_bet = self.get_ecart_bet_from_symbol_and_ID(symbol,ID)
+        UP_actuel = int(ecart_bet[4])
         try:
             self.cur.execute("UPDATE ecart_bet SET UP=? WHERE symbol=? AND ID=?",
-                             (qtt,symbol,ID))
+                             (int(qtt+UP_actuel),symbol,ID))
         except sqlite3.IntegrityError as inst:
             ordre = self.get_order_info_by_ID(ID)
             self.new_log_error("ajout_up_bet",str(inst),ordre["symbol"])
@@ -779,68 +781,40 @@ class sqlAcces():
         ec_b = self.get_ecart_bet_from_symbol(symbol)
         for ID in range(len(ec_b)-ID_courant-1):
             benef = self.get_calcul_benef_with_ID(symbol,ID+ID_courant+1)
-            if benef/ec_b[ID+ID_courant+1] < (local + UP):
+            #breakpoint()
+            if benef/ec_b[ID+ID_courant+1][0] < (local + UP):
                 return ID+ID_courant+1
+            
+    def get_calcul_benef_with_ID(self,symbol,ID):
+        FEE = 0.00075
+        ec_b = self.get_ecart_bet_from_symbol(symbol)
+        delta = ec_b[ID+1][0]-ec_b[ID][0]
+        benef = delta*ec_b[ID][1]-2*FEE*ec_b[ID][1]*ec_b[ID][0]
+        return benef
 
     def arrangement_DB(self,symbol):
-        tab = {93:6,
-               98:6,
-               99:6,
-               100:12,
-               101:12,
-               102:18,
-               103:24,
-               104:46,
-               105:54,
-               106:52,
-               107:58,
-               108:82,
-               109:102,
-               110:120,
-               111:70,
-               112:70,
-               113:32,
-               114:8,
-               115:20,
-               116:10,
-               117:10,
-               118:26,
-               119:10,
-               120:-19,
-               121:-32,
-               122:-12,
-               123:-18,
-               124:-24,
-               125:-18,
-               126:6,
-               127:18,
-               128:18,
-               129:8,
-               130:17,
-               131:21,
-               132:-2,
-               133:21,
-               134:28,
-               135:1,
-               136:22,
-               137:-24,
-               138:-22,
-               139:12,
-               140:11,
-               141:-29,
-               142:-29,
-               143:-30,
-               144:-22,
-               145:-25,
-               146:-35,
-               147:-13,
-               148:-20,
-               149:-75,
-               150:-118,
-               151:-103,
-               152:-70,
-               153:-46,
-               154:-54}
+        tab = {113:10,
+               114:20,
+               115:30,
+               116:40,
+               117:40,
+               118:20,
+               119:20,
+               120:20,
+               121:20,
+               124:20,
+               125:20,
+               126:20,
+               145:-10,
+               146:-10,
+               147:-10,
+               148:-10,
+               149:-10,
+               151:-10,
+               155:-10,
+               156:-10,
+               157:-10,
+               158:-3}
         keys = tab.keys()
         for key in keys:
             print(key)
@@ -879,11 +853,6 @@ def main():
     #sql.calcul_benefice(DEVISE,lastfilled)
     
     resultat = sql.get_gain_mois("XRPEUR",2024,8)
-    sql.min_sell("XRPEUR",2024,5)
-    sql.max_sell("XRPEUR",2024,5)
-    sql.min_buy("XRPEUR",2024,5)
-    sql.max_buy("XRPEUR",2024,5)
-    sql.count_sell_ID_ecart("XRPEUR",2024,8,157)
     print("XRPEUR: "+str(resultat))
     total = resultat
     resultat = sql.get_gain_mois("DOGEBTC",2024,8)
@@ -893,8 +862,12 @@ def main():
     resultat = sql.get_gain_mois("DOGEEUR",2024,8)
     print("DOGEEUR: "+str(resultat))
     total += resultat
+    resultat = sql.get_gain_mois("XRPETH",2024,8)
+    print("XRPETH: "+str(resultat))
+    print("XRPETH (EUR): "+str(resultat*2200))
+    total += resultat*2400
     print("total: "+str(total))
-    #sql.arrangement_DB("XRPEUR")
+    #sql.arrangement_DB("XRPEUR")"""
     """
     sql.ajout_benef_paire_devise("XRPEUR",2.4)
     infos_devise = sql.get_devises_from_symbol("DOGEEUR")
@@ -905,5 +878,8 @@ def main():
     ecart_bet = sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
     breakpoint()"""
     #sql.arrangement_DB("XRPEUR")
+    #sql.set_ecart_bet("XRPETH.csv")
+    #sql.set_ajout("XRPETH_Ajout.csv")
+    #sql.ajout_up_bet("XRPEUR",15,4)
 if __name__ == '__main__':
      main()

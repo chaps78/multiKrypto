@@ -17,11 +17,11 @@ class binAcces():
             #breakpoint()
             UP = 0
             if sens == self.client.SIDE_BUY and (niveau==1 or niveau == 2):
-                ecart_bet = self.sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
+                ecart_bet = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)
                 UP = int(ecart_bet[4])
-                if UP >0:
+                if int(UP) >0:
                     montant += UP
-                    self.tele.send_message("Un ordre ouvert avec un ajout pour le UP d'un montant de : "+str(UP))
+                    self.sql.tele.send_message("Un ordre ouvert avec un ajout pour le UP d'un montant de : "+str(UP))
 
             response = self.client.create_order(symbol=symbol, 
                                             side=sens, 
