@@ -12,11 +12,15 @@ class Kpi():
         last_filled = self.bin.sql.get_last_filled(symbol)
         devises=self.bin.sql.get_devises_from_symbol(symbol)
         #founds = self.bin.get_found([devises["devise1"],devises["devise2"]],symbol)
-        founds = self.bin.get_found(["XRP","EUR","BTC","DOGE"],symbol)
+        founds = self.bin.get_found(["XRP","EUR","BTC","DOGE","ETH","PEPE"],symbol)
         XRPEUR_Price = float(self.bin.get_price("XRPEUR")["price"])
         DOGEEUR_Price = float(self.bin.get_price("DOGEEUR")["price"])
         BTCEUR_Price = float(self.bin.get_price("BTCEUR")["price"])
-        total = founds["EUR"] + founds["XRP"] * XRPEUR_Price + founds["DOGE"] * DOGEEUR_Price + founds["BTC"] * BTCEUR_Price
+        PEPEEUR_Price = float(self.bin.get_price("PEPEEUR")["price"])
+        ETHEUR_Price = float(self.bin.get_price("ETHEUR")["price"])
+        total = founds["EUR"] + founds["XRP"] * XRPEUR_Price
+        total += founds["DOGE"] * DOGEEUR_Price + founds["BTC"] * BTCEUR_Price
+        total += founds["ETH"] * ETHEUR_Price + founds["PEPE"] * PEPEEUR_Price
         devise1 = founds[devises["devise1"]]
         devise2 = founds[devises["devise2"]]
         ecart_bet_dic = self.bin.sql.get_ecart_bet_from_symbol(symbol)
@@ -41,6 +45,10 @@ class Kpi():
                                     ,founds["BTC"]
                                     ,BTCEUR_Price
                                     ,total
+                                    ,founds["ETH"]
+                                    ,ETHEUR_Price
+                                    ,founds["PEPE"]
+                                    ,PEPEEUR_Price
                                     )
         return ret
 
@@ -83,8 +91,28 @@ def main():
     print("\nDOGEBTC:\n")
     kpi.stat_mois("DOGEBTC",2024,6)
     #kpi.reste_sur_limites("XRPEUR")
-
-
+    bin = binAcces()
+    sql = sqlAcces()
+    resultat = sql.get_gain_mois("XRPEUR",2024,8)
+    print("XRPEUR: "+str(resultat))
+    total = resultat
+    resultat = sql.get_gain_mois("DOGEBTC",2024,8)
+    print("DOGEBTC: "+str(resultat))
+    BTCEUR_Price = float(bin.get_price("BTCEUR")["price"])
+    print("DOGEBTC (EUR): "+str(resultat*BTCEUR_Price))
+    total += resultat*60000
+    resultat = sql.get_gain_mois("DOGEEUR",2024,8)
+    print("DOGEEUR: "+str(resultat))
+    total += resultat
+    resultat = sql.get_gain_mois("XRPETH",2024,8)
+    print("XRPETH: "+str(resultat))
+    ETHEUR_Price = float(bin.get_price("ETHEUR")["price"])
+    print("XRPETH (EUR): "+str(resultat*ETHEUR_Price))
+    total += resultat*2400
+    resultat = sql.get_gain_mois("PEPEEUR",2024,8)
+    print("PEPEEUR: "+str(resultat))
+    total += resultat
+    print("total: "+str(total))
 
 
 if __name__ == '__main__':

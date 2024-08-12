@@ -375,9 +375,9 @@ class sqlAcces():
                             }
         return(formated_devises)
 
-    def set_KPI_restes(self,symbol,restes,last_ID,EUR,XRP,XRP_Prix,DOGE,DOGE_Prix,BTC,BTC_Prix,Total):
+    def set_KPI_restes(self,symbol,restes,last_ID,EUR,XRP,XRP_Prix,DOGE,DOGE_Prix,BTC,BTC_Prix,Total,ETH,ETH_Prix,PEPE,PEPE_Prix):
         try:
-            self.cur.execute("INSERT INTO reste VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            self.cur.execute("INSERT INTO reste VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                                  (datetime.now(timezone.utc)
                                   ,symbol,restes[0]
                                   ,restes[1]
@@ -390,6 +390,10 @@ class sqlAcces():
                                   ,float(BTC)
                                   ,float(BTC_Prix)
                                   ,float(Total)
+                                  ,float(ETH)
+                                  ,float(ETH_Prix)
+                                  ,float(PEPE)
+                                  ,float(PEPE_Prix)
                                   ))
         except sqlite3.IntegrityError as inst:
             self.new_log_error("set_KPI_restes_SQL",str(inst),symbol)
@@ -857,15 +861,20 @@ def main():
     total = resultat
     resultat = sql.get_gain_mois("DOGEBTC",2024,8)
     print("DOGEBTC: "+str(resultat))
-    print("DOGEBTC (EUR): "+str(resultat*60000))
+    BTCEUR_Price = float(sql.bin.get_price("BTCEUR")["price"])
+    print("DOGEBTC (EUR): "+str(resultat*BTCEUR_Price))
     total += resultat*60000
     resultat = sql.get_gain_mois("DOGEEUR",2024,8)
     print("DOGEEUR: "+str(resultat))
     total += resultat
     resultat = sql.get_gain_mois("XRPETH",2024,8)
     print("XRPETH: "+str(resultat))
-    print("XRPETH (EUR): "+str(resultat*2200))
+    ETHEUR_Price = float(sql.bin.get_price("ETHEUR")["price"])
+    print("XRPETH (EUR): "+str(resultat*ETHEUR_Price))
     total += resultat*2400
+    resultat = sql.get_gain_mois("PEPEEUR",2024,8)
+    print("PEPEEUR: "+str(resultat))
+    total += resultat
     print("total: "+str(total))
     #sql.arrangement_DB("XRPEUR")"""
     """
@@ -878,8 +887,8 @@ def main():
     ecart_bet = sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
     breakpoint()"""
     #sql.arrangement_DB("XRPEUR")
-    #sql.set_ecart_bet("XRPETH.csv")
-    #sql.set_ajout("XRPETH_Ajout.csv")
+    #sql.set_ecart_bet("PEPEEUR.csv")
+    #sql.set_ajout("PEPEEUR_Ajout.csv")
     #sql.ajout_up_bet("XRPEUR",15,4)
 if __name__ == '__main__':
      main()

@@ -22,11 +22,13 @@ class binAcces():
                 if int(UP) >0:
                     montant += UP
                     self.sql.tele.send_message("Un ordre ouvert avec un ajout pour le UP d'un montant de : "+str(UP))
-
+            montant_call='%.8f' % montant
+            if symbol == "PEPEEUR":
+                montant_call='%.0f' % montant
             response = self.client.create_order(symbol=symbol, 
                                             side=sens, 
                                             type=Client.ORDER_TYPE_LIMIT, 
-                                            quantity='%.8f' % montant, 
+                                            quantity=montant_call, 
                                             price='%.8f' % limite,
                                             timeInForce='GTC')
         except Exception as inst:
