@@ -228,17 +228,25 @@ class sqlAcces():
         delta=float(last_filled["limite"])-float(ecart_dessous[2])
         benef = delta*last_filled["montant"]-2*FEE*last_filled["montant"]*last_filled["limite"]
         prix_reduce = (last_filled["limite"]-benef/qtt_init)*qtt_init/qtt
+        prix_reduce_haut = (last_filled["limite"]-benef/qtt_init)*qtt_init/qtt
         if prix_reduce<0:
             return "NA"
         ecart_tab = self.get_ecart_bet_from_symbol(symbol)
         keys = ecart_tab.keys()
         ID_down = 0
+        ID_UP = 0
         for key in keys:
             if ecart_tab[key][0]>prix_reduce:
                 ID_down=key
                 break
+        for key in keys:
+            if ecart_tab[key][0]>prix_reduce_haut:
+                ID_UP=key
+                break
         self.add_to_ajout(symbol,int(ID_down),-qtt)
         self.update_bet_with_ID(symbol,ID_down,ecart_tab[ID_down][1]-qtt)
+        self.add_to_ajout(symbol,int(ID_UP),-qtt)
+        self.update_bet_with_ID(symbol,ID_UP,ecart_tab[ID_UP][1]-qtt)
         return ID_down
     
     def ajout_benef_paire_devise(self,symbol,qtt):
@@ -282,6 +290,14 @@ class sqlAcces():
         delta=float(last_filled["limite"])-float(ecart_dessous[2])
         benef = delta*last_filled["montant"]-2*FEE*last_filled["montant"]*last_filled["limite"]
         return benef
+    
+    def calcul_benef_with_ID(self,symbol,ID,limite,montant):
+        FEE = 0.00075
+        ecart_dessous = self.get_ecart_bet_from_symbol_and_ID(symbol,ID-1)
+        delta=float(limite)-float(ecart_dessous[2])
+        self.tele.send_message("le delta pour le calcul du benef est: " + str(delta))
+        benef = delta*float(montant)-2*FEE*float(montant)*float(limite)
+        return benef
 
     def add_bet_after_sell(self,symbol,last_filled):
         if last_filled["sens"] == "SELL":
@@ -295,8 +311,8 @@ class sqlAcces():
                 benef_ratio = benef/last_filled["limite"]
                 if benef_ratio < ajout_qtt:
                     #self.tele.send_message("vente avec benef_ratio < ajout_qtt " + str(benef_ratio))
-                    self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt)
-                    self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt)
+                    self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt*2)
+                    self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt*2)
                     self.calcul_delta_pour_ajout(symbol,last_filled,ajout_qtt)
                 elif benef_ratio >= ajout_qtt and benef_ratio <= (ajout_qtt + UP):
                     #self.tele.send_message("vente avec benef_ratio > ajout_qtt " + str(benef_ratio))
@@ -797,28 +813,18 @@ class sqlAcces():
         return benef
 
     def arrangement_DB(self,symbol):
-        tab = {113:10,
-               114:20,
-               115:30,
-               116:40,
-               117:40,
-               118:20,
-               119:20,
-               120:20,
-               121:20,
-               124:20,
-               125:20,
-               126:20,
-               145:-10,
-               146:-10,
-               147:-10,
-               148:-10,
-               149:-10,
-               151:-10,
-               155:-10,
-               156:-10,
-               157:-10,
-               158:-3}
+        tab = {101:10,
+               102:15,
+               103:15,
+               104:35,
+               105:25,
+               106:15,
+               107:5,
+               132:-20,
+               133:-20,
+               134:-27,
+               135:-20,
+               136:-20}
         keys = tab.keys()
         for key in keys:
             print(key)
@@ -855,7 +861,7 @@ def main():
     #    sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,2,158+2*i)
     #sql.calcul_delta_pour_ajout("XRPEUR",lastfilled,4)
     #sql.calcul_benefice(DEVISE,lastfilled)
-    
+    """
     resultat = sql.get_gain_mois("XRPEUR",2024,8)
     print("XRPEUR: "+str(resultat))
     total = resultat
@@ -886,7 +892,7 @@ def main():
     print(UP)
     ecart_bet = sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
     breakpoint()"""
-    #sql.arrangement_DB("XRPEUR")
+    sql.arrangement_DB("XRPEUR")
     #sql.set_ecart_bet("PEPEEUR.csv")
     #sql.set_ajout("PEPEEUR_Ajout.csv")
     #sql.ajout_up_bet("XRPEUR",15,4)
