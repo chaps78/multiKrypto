@@ -22,6 +22,15 @@ class binAcces():
                 if int(UP) >0:
                     montant += UP
                     self.sql.tele.send_message("Un ordre ouvert avec un ajout pour le UP d'un montant de : "+str(UP))
+
+
+            infos_devise = self.get_devises_from_symbol(symbol)
+            ajout_qtt = infos_devise["local"]
+            benef = self.sql.calcul_benef_with_ID(symbol,ID_ecart,limite,montant)
+            benef_ratio = benef/limite
+            if sens == self.client.SIDE_SELL and (niveau==1 or niveau == 2) and benef_ratio < ajout_qtt:
+                montant += ajout_qtt
+
             montant_call='%.8f' % montant
             if symbol == "PEPEEUR":
                 montant_call='%.0f' % montant
