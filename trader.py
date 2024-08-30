@@ -145,11 +145,11 @@ class Basics():
             #Delais d attente de 30 min pour un ordre niveau 4
             if int(niveaux[key]["niveau"]) == 4 and niveaux[key]["time"].seconds > 1800:
                 self.bin.baisser_niveau_ordre(key)
-            # Delas d attente de 2 heures pour un ordre de niveau 3
-            if int(niveaux[key]["niveau"]) == 3 and niveaux[key]["time"].seconds > 7200:
+            # Delas d attente de 1 heures pour un ordre de niveau 3
+            if int(niveaux[key]["niveau"]) == 3 and niveaux[key]["time"].seconds > 3600:
                 self.bin.baisser_niveau_ordre(key)
-            # Delas d attente de 3 heures pour un ordre de niveau 2
-            if int(niveaux[key]["niveau"]) == 2 and niveaux[key]["time"].seconds > 10800:
+            # Delas d attente de 2 heures pour un ordre de niveau 2
+            if int(niveaux[key]["niveau"]) == 2 and niveaux[key]["time"].seconds > 7200:
                 self.sql.baisser_niveau_ordre_SQL(key,1)
 
 ###########################################################################
@@ -164,7 +164,7 @@ def main():
     ################################################
     basic.tele.send_message("Bonjour")
     #for DEVISE in DEVISES:
-    #basic.initialise("XRPEUR")
+    #basic.initialise("ETHEUR")
     #basic.initialise("PEPEEUR")
     #    time.sleep(3)
     while True:

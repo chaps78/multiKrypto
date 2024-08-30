@@ -228,7 +228,7 @@ class sqlAcces():
         delta=float(last_filled["limite"])-float(ecart_dessous[2])
         benef = delta*last_filled["montant"]-2*FEE*last_filled["montant"]*last_filled["limite"]
         prix_reduce = (last_filled["limite"]-benef/qtt_init)*qtt_init/qtt
-        prix_reduce_haut = (last_filled["limite"]-benef/qtt_init)*qtt_init/qtt
+        prix_reduce_haut = (last_filled["limite"]+benef/qtt_init)*qtt_init/qtt
         if prix_reduce<0:
             return "NA"
         ecart_tab = self.get_ecart_bet_from_symbol(symbol)
@@ -243,6 +243,7 @@ class sqlAcces():
             if ecart_tab[key][0]>prix_reduce_haut:
                 ID_UP=key
                 break
+        self.tele.send_message("down :"+str(ID_down)+"\nUP : "+str(ID_UP))
         self.add_to_ajout(symbol,int(ID_down),-qtt)
         self.update_bet_with_ID(symbol,ID_down,ecart_tab[ID_down][1]-qtt)
         self.add_to_ajout(symbol,int(ID_UP),-qtt)
@@ -295,7 +296,6 @@ class sqlAcces():
         FEE = 0.00075
         ecart_dessous = self.get_ecart_bet_from_symbol_and_ID(symbol,ID-1)
         delta=float(limite)-float(ecart_dessous[2])
-        self.tele.send_message("le delta pour le calcul du benef est: " + str(delta))
         benef = delta*float(montant)-2*FEE*float(montant)*float(limite)
         return benef
 
@@ -813,18 +813,29 @@ class sqlAcces():
         return benef
 
     def arrangement_DB(self,symbol):
-        tab = {101:10,
-               102:15,
-               103:15,
-               104:35,
-               105:25,
-               106:15,
-               107:5,
-               132:-20,
-               133:-20,
-               134:-27,
-               135:-20,
-               136:-20}
+        tab = {95:24,
+               97:24,
+               99:24,
+               100:12,
+               101:14,
+               102:39,
+               103:9,
+               104:7,
+               106:3,
+               108:6,
+               132:-10,
+               133:-10,
+               134:-10,
+               135:-10,
+               136:-10,
+               137:-10,
+               138:-10,
+               139:-10,
+               140:-10,
+               141:-10,
+               142:-10,
+               143:-10,
+               144:-6}
         keys = tab.keys()
         for key in keys:
             print(key)
@@ -892,9 +903,9 @@ def main():
     print(UP)
     ecart_bet = sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
     breakpoint()"""
-    sql.arrangement_DB("XRPEUR")
-    #sql.set_ecart_bet("PEPEEUR.csv")
-    #sql.set_ajout("PEPEEUR_Ajout.csv")
+    #sql.arrangement_DB("XRPEUR")
+    sql.set_ecart_bet("ETHEUR.csv")
+    sql.set_ajout("ETHEUR_Ajout.csv")
     #sql.ajout_up_bet("XRPEUR",15,4)
 if __name__ == '__main__':
      main()

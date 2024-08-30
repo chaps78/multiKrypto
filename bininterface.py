@@ -24,7 +24,7 @@ class binAcces():
                     self.sql.tele.send_message("Un ordre ouvert avec un ajout pour le UP d'un montant de : "+str(UP))
 
 
-            infos_devise = self.get_devises_from_symbol(symbol)
+            infos_devise = self.sql.get_devises_from_symbol(symbol)
             ajout_qtt = infos_devise["local"]
             benef = self.sql.calcul_benef_with_ID(symbol,ID_ecart,limite,montant)
             benef_ratio = benef/limite

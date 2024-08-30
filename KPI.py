@@ -72,6 +72,31 @@ class Kpi():
                   +str(result[key]["SELL"][0])
                   +":"+str(result[key]["SELL"][1])
                   +":"+str(result[key]["SELL"][2]))
+            
+
+    def gain_month_global(self,year,month):
+        print("\n\n#########################################################")
+        print("#              KPI YEAR "+str(year) + " MONTH "+str(month)+ "\t                #")
+        print("#########################################################")
+        symbols = self.sql.get_symbols()
+        total=0
+        for symbol in symbols:
+            #print("#\t\t" + symbol + "\t\t#")
+            resultat = self.sql.get_gain_mois(symbol,year,month)
+            if resultat != None:
+                devise_info = self.sql.get_devises_from_symbol(symbol)
+                if devise_info["devise2"] == "EUR":
+                    print("#\t" + symbol +" : \t\t## \t"+str(round(resultat,2))+" EUR\t#")
+                    total += resultat
+                else:
+                    Price = float(self.bin.get_price(devise_info["devise2"]+"EUR")["price"])
+                    print("#\t"+symbol +" : "+ str(round(resultat,2))
+                          + " " + devise_info["devise2"] 
+                          + "\t## \t"+str(round(resultat*Price,2))+" EUR\t#")
+                    total+=resultat*Price
+        print("#########################################################")
+        print("#\t\t\tTOTAL : "+ str(round(total,2))+ "\t\t\t#")
+        print("#########################################################")
 
 
 
@@ -83,36 +108,57 @@ class Kpi():
 def main():
     DEVISE="XRPEUR"
     kpi = Kpi()
-
+    sql = sqlAcces()
+    mois = 8
+    """
     print("\nXRPEUR:\n")
-    kpi.stat_mois("XRPEUR",2024,6)
+    kpi.stat_mois("XRPEUR",2024,mois)
     print("\nDOGEEUR:\n")
-    kpi.stat_mois("DOGEEUR",2024,6)
-    print("\nDOGEBTC:\n")
-    kpi.stat_mois("DOGEBTC",2024,6)
+    kpi.stat_mois("DOGEEUR",2024,mois)
+    print("\nPEPEEUR:\n")
+    kpi.stat_mois("PEPEEUR",2024,mois)
     #kpi.reste_sur_limites("XRPEUR")
+    #"""
+    """
     bin = binAcces()
     sql = sqlAcces()
-    resultat = sql.get_gain_mois("XRPEUR",2024,8)
+    resultat = sql.get_gain_mois("XRPEUR",2024,mois)
     print("XRPEUR: "+str(resultat))
     total = resultat
-    resultat = sql.get_gain_mois("DOGEBTC",2024,8)
+    resultat = sql.get_gain_mois("DOGEBTC",2024,mois)
     print("DOGEBTC: "+str(resultat))
     BTCEUR_Price = float(bin.get_price("BTCEUR")["price"])
     print("DOGEBTC (EUR): "+str(resultat*BTCEUR_Price))
-    total += resultat*60000
-    resultat = sql.get_gain_mois("DOGEEUR",2024,8)
+    total += resultat*BTCEUR_Price
+    resultat = sql.get_gain_mois("DOGEEUR",2024,mois)
     print("DOGEEUR: "+str(resultat))
     total += resultat
-    resultat = sql.get_gain_mois("XRPETH",2024,8)
+    resultat = sql.get_gain_mois("XRPETH",2024,mois)
     print("XRPETH: "+str(resultat))
     ETHEUR_Price = float(bin.get_price("ETHEUR")["price"])
     print("XRPETH (EUR): "+str(resultat*ETHEUR_Price))
-    total += resultat*2400
-    resultat = sql.get_gain_mois("PEPEEUR",2024,8)
+    total += resultat*ETHEUR_Price
+    resultat = sql.get_gain_mois("PEPEEUR",2024,mois)
     print("PEPEEUR: "+str(resultat))
     total += resultat
     print("total: "+str(total))
+    #"""
+    print("1-Gain du mois\n2-Recap de la quantitée d'ordres")
+    choice = input("Enter your choice [1-2]: ")
+    if choice == '1':
+        kpi.gain_month_global(2024,5)
+        kpi.gain_month_global(2024,6)
+        kpi.gain_month_global(2024,7)
+        kpi.gain_month_global(2024,mois)
+    symbols = sql.get_symbols()
+    if choice == '2':
+        print("sur quelle paire?")
+        for el in symbols:
+            print(str(symbols.index(el))+"-"+el)
+        choice2 = input("?")
+
+        print("\n"+str(symbols[int(choice2)])+":\n")
+        kpi.stat_mois(symbols[int(choice2)],2024,mois)
 
 
 if __name__ == '__main__':
