@@ -157,15 +157,15 @@ class Basics():
 ###########################################################################
 def main():
     basic = Basics()
-    DEVISES=basic.sql.get_symbols()
+    DEVISES=basic.sql.get_symbols_actif()
 
     ################################################
     #    Initialisation
     ################################################
     basic.tele.send_message("Bonjour")
     #for DEVISE in DEVISES:
-    #basic.initialise("ETHEUR")
-    #basic.initialise("PEPEEUR")
+    basic.initialise("PEPEEUR_2")
+    basic.initialise("PEPEEUR_3")
     #    time.sleep(3)
     while True:
         for DEVISE in DEVISES:

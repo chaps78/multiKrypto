@@ -14,7 +14,6 @@ class binAcces():
 
     def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,niveau=1):
         try:
-            #breakpoint()
             UP = 0
             if sens == self.client.SIDE_BUY and (niveau==1 or niveau == 2):
                 ecart_bet = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)
@@ -28,13 +27,15 @@ class binAcces():
             ajout_qtt = infos_devise["local"]
             benef = self.sql.calcul_benef_with_ID(symbol,ID_ecart,limite,montant)
             benef_ratio = benef/limite
-            if sens == self.client.SIDE_SELL and (niveau==1 or niveau == 2) and benef_ratio < ajout_qtt:
+            if sens == self.client.SIDE_SELL and (niveau==1 or niveau == 2) and benef_ratio < ajout_qtt and symbol=="XRPEUR":
                 montant += ajout_qtt
 
             montant_call='%.8f' % montant
-            if symbol == "PEPEEUR":
+            if symbol == "PEPEEUR" or symbol == "PEPEEUR_1" or symbol == "PEPEEUR_2" or symbol == "PEPEEUR_3":
                 montant_call='%.0f' % montant
-            response = self.client.create_order(symbol=symbol, 
+            symbol_plited = symbol.split("_")[0]
+            
+            response = self.client.create_order(symbol=symbol_plited, 
                                             side=sens, 
                                             type=Client.ORDER_TYPE_LIMIT, 
                                             quantity=montant_call, 
@@ -54,7 +55,7 @@ class binAcces():
     ###############################
     def new_achat(self,symbol,ID_ecart,flag_ajout=0):
         last_ordre = self.sql.get_last_filled(symbol)
-        #breakpoint()
+        
         if last_ordre != "":
             if last_ordre["sens"]== Client.SIDE_SELL:
                 bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
@@ -209,7 +210,8 @@ class binAcces():
 
     def new_market_order(self,symbol,montant,sens):
         try:
-            response = self.client.create_order(symbol=symbol, 
+            symbol_splited = symbol.split("_")[0]
+            response = self.client.create_order(symbol=symbol_splited, 
                                         side=sens, 
                                         type=Client.ORDER_TYPE_MARKET, 
                                         quantity=montant)
@@ -224,7 +226,8 @@ class binAcces():
     def cancel_order(self,ID):
         try:
             symbol = self.sql.get_order_info_by_ID(ID)["symbol"]
-            ordre = self.client.cancel_order(symbol=symbol,orderId=int(ID))
+            symbol_split = symbol.split("_")[0]
+            ordre = self.client.cancel_order(symbol=symbol_split,orderId=int(ID))
         except Exception as inst:
             self.sql.new_log_error("cancel_order_Binance",str(inst),symbol)
             return ""
@@ -241,7 +244,8 @@ class binAcces():
             ordres_new = self.sql.get_orders_status_symbol_filter(self.client.ORDER_STATUS_NEW,symbol)
             ordres_partial = self.sql.get_orders_status_symbol_filter(self.client.ORDER_STATUS_PARTIALLY_FILLED,symbol)
             ordres_DB = ordres_partial + ordres_new
-            orders_Binance = self.client.get_all_orders(symbol=symbol)
+            symbol_splited = symbol.split("_")[0]
+            orders_Binance = self.client.get_all_orders(symbol=symbol_splited)
             change = []
             for ob in orders_Binance:
                 ordre = self.sql.get_order_info_by_ID(ob["orderId"])
@@ -295,7 +299,8 @@ class binAcces():
     
     def get_price(self,symbol):
         try:
-            result = self.client.get_symbol_ticker(symbol=symbol)
+            symbol_split = symbol.split("_")[0]
+            result = self.client.get_symbol_ticker(symbol=symbol_split)
         except Exception as inst:
             self.sql.new_log_error("get_price_Binance",str(inst),symbol)
             return "ERROR"

@@ -79,6 +79,7 @@ class Kpi():
         print("#              KPI YEAR "+str(year) + " MONTH "+str(month)+ "\t                #")
         print("#########################################################")
         symbols = self.sql.get_symbols()
+        #symbols.append("PEPEEUR")
         total=0
         for symbol in symbols:
             #print("#\t\t" + symbol + "\t\t#")
@@ -86,13 +87,13 @@ class Kpi():
             if resultat != None:
                 devise_info = self.sql.get_devises_from_symbol(symbol)
                 if devise_info["devise2"] == "EUR":
-                    print("#\t" + symbol +" : \t\t## \t"+str(round(resultat,2))+" EUR\t#")
+                    print("#\t" + symbol +" : \t\t## \t"+str(round(resultat,2))+" EUR  \t#")
                     total += resultat
                 else:
                     Price = float(self.bin.get_price(devise_info["devise2"]+"EUR")["price"])
                     print("#\t"+symbol +" : "+ str(round(resultat,2))
                           + " " + devise_info["devise2"] 
-                          + "\t## \t"+str(round(resultat*Price,2))+" EUR\t#")
+                          + "\t## \t"+str(round(resultat*Price,2))+" EUR  \t#")
                     total+=resultat*Price
         print("#########################################################")
         print("#\t\t\tTOTAL : "+ str(round(total,2))+ "\t\t\t#")
@@ -109,7 +110,7 @@ def main():
     DEVISE="XRPEUR"
     kpi = Kpi()
     sql = sqlAcces()
-    mois = 8
+    mois = 9
     """
     print("\nXRPEUR:\n")
     kpi.stat_mois("XRPEUR",2024,mois)
@@ -146,9 +147,9 @@ def main():
     print("1-Gain du mois\n2-Recap de la quantitée d'ordres")
     choice = input("Enter your choice [1-2]: ")
     if choice == '1':
-        kpi.gain_month_global(2024,5)
         kpi.gain_month_global(2024,6)
         kpi.gain_month_global(2024,7)
+        kpi.gain_month_global(2024,8)
         kpi.gain_month_global(2024,mois)
     symbols = sql.get_symbols()
     if choice == '2':

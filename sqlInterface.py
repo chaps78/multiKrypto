@@ -292,6 +292,13 @@ class sqlAcces():
         benef = delta*last_filled["montant"]-2*FEE*last_filled["montant"]*last_filled["limite"]
         return benef
     
+    def calcul_benef_unique_fee(self,symbol,last_filled):
+        FEE = 0.00075
+        ecart_dessous = self.get_ecart_bet_from_symbol_and_ID(symbol,last_filled["ID_ecart"]-1)
+        delta=float(last_filled["limite"])-float(ecart_dessous[2])
+        benef = delta*last_filled["montant"]-FEE*last_filled["montant"]*last_filled["limite"]
+        return benef
+    
     def calcul_benef_with_ID(self,symbol,ID,limite,montant):
         FEE = 0.00075
         ecart_dessous = self.get_ecart_bet_from_symbol_and_ID(symbol,ID-1)
@@ -304,26 +311,29 @@ class sqlAcces():
             infos_devise = self.get_devises_from_symbol(symbol)
             ajout_qtt = infos_devise["local"]
             UP = infos_devise["up"]
-            current_bet = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-1)[3]
+            current_bet = self.get_ecart_bet_from_symbol_and_ID(symbol,float(last_filled["ID_ecart"])-1)[3]
             if int(last_filled["niveau"]) == 1 or int(last_filled["niveau"]) == 2:
                 #self.tele.send_message("vente avec benef_ratio")
                 benef = self.calcul_benef(symbol,last_filled)
                 benef_ratio = benef/last_filled["limite"]
+                benef_unique_fee = self.calcul_benef_unique_fee(symbol,last_filled)
+                benef_ratiounique_fee = benef_unique_fee/last_filled["limite"]
+                self.tele.send_message("benef-ratio : "+str(benef_ratio)+"\nUP : "+str(UP))
                 if benef_ratio < ajout_qtt:
                     #self.tele.send_message("vente avec benef_ratio < ajout_qtt " + str(benef_ratio))
-                    self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt*2)
+                    self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+ajout_qtt*2)
                     self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt*2)
                     self.calcul_delta_pour_ajout(symbol,last_filled,ajout_qtt)
                 elif benef_ratio >= ajout_qtt and benef_ratio <= (ajout_qtt + UP):
                     #self.tele.send_message("vente avec benef_ratio > ajout_qtt " + str(benef_ratio))
-                    self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt)
+                    self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+ajout_qtt)
                     self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt)
-                    self.ajout_benef_paire_devise(symbol,(benef_ratio-ajout_qtt)*last_filled["limite"])
+                    self.ajout_benef_paire_devise(symbol,(benef_ratiounique_fee-ajout_qtt)*last_filled["limite"])
                 else:
                     #self.tele.send_message("vente avec benef_ratio > ajout_qtt + UP " + str(benef_ratio))
-                    self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+ajout_qtt)
+                    self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+ajout_qtt)
                     self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt)
-                    self.ajout_benef_paire_devise(symbol,(benef_ratio-ajout_qtt-UP)*last_filled["limite"])
+                    self.ajout_benef_paire_devise(symbol,(benef_ratiounique_fee-ajout_qtt-UP)*last_filled["limite"])
                     self.ajout_up_bet(symbol,int(last_filled["ID_ecart"])-1,UP)
             elif int(last_filled["niveau"]) == 3:
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+2)
@@ -331,6 +341,12 @@ class sqlAcces():
                 bet_NV_3 = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-2)[3]
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-2,int(bet_NV_3)+1)
                 self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-2,1)
+                benef_sans_add =self.get_calcul_benefice(symbol,last_filled)
+                ec_bet = self.get_ecart_bet_from_symbol(symbol)
+                epargne = benef_sans_add - 2 * ec_bet[last_filled["ID_ecart"]-1][0]
+                epargne += -ec_bet[last_filled["ID_ecart"]-2][0]
+
+                self.ajout_benef_paire_devise(symbol,epargne)
             elif int(last_filled["niveau"]) == 4:
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+2)
                 self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,2)
@@ -340,7 +356,15 @@ class sqlAcces():
                 bet_NV_4 = self.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-3)[3]
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-3,int(bet_NV_4)+1)
                 self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-3,1)
-
+                benef_sans_add =self.get_calcul_benefice(symbol,last_filled)
+                ec_bet = self.get_ecart_bet_from_symbol(symbol)
+                epargne = benef_sans_add - 3 * ec_bet[last_filled["ID_ecart"]-1][0]
+                epargne += - 2 * ec_bet[last_filled["ID_ecart"]-2][0]
+                epargne += - ec_bet[last_filled["ID_ecart"]-3][0]
+                self.ajout_benef_paire_devise(symbol,epargne)
+        elif last_filled["sens"] == "BUY":
+            benef_sans_add =self.get_calcul_benefice(symbol,last_filled)
+            self.ajout_benef_paire_devise(symbol,benef_sans_add)
     def convert_fetch_to_dico(self,ordre):
         ordre_dico = {"ID":ordre[0],
                       "symbol":ordre[1],
@@ -362,6 +386,20 @@ class sqlAcces():
     def get_symbols(self):
         try:
             res = self.cur.execute("SELECT * FROM Devises")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_symbols_SQL",str(inst),"GET_SYMBOL")
+            return inst
+        devises_SQL = res.fetchall()
+
+        devises_ret=[]
+        for devise_SQL in devises_SQL:
+            devises_ret.append(devise_SQL[0])
+        return devises_ret
+    
+    def get_symbols_actif(self):
+        try:
+            res = self.cur.execute("SELECT * FROM Devises WHERE actif=1")
 
         except sqlite3.IntegrityError as inst:
             self.new_log_error("get_symbols_SQL",str(inst),"GET_SYMBOL")
@@ -606,6 +644,77 @@ class sqlAcces():
                 Benef3 = B3 * (ecart_bet[ID_ecart_filled+2][0]-ecart_bet[ID_ecart_filled][0])
                 self.update_order_benef(last_filled["ID"],str(Benef2+Benef3-fee_courant))
     
+    def get_calcul_benefice(self,symbol,last_filled):
+        FEE=0.00075
+        ecart_bet = self.get_ecart_bet_from_symbol(symbol)
+        ID_ecart_filled = last_filled["ID_ecart"]
+
+        if last_filled["sens"]=="SELL":
+            if last_filled["niveau"] == 1 or last_filled["niveau"] == 2:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                benef=last_filled["montant"]*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
+                return float(benef-fee_courant)
+            elif last_filled["niveau"] == 3:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                B1=ecart_bet[ID_ecart_filled-1][1]
+                B2=ecart_bet[ID_ecart_filled-2][1]
+                if int(B1+B2) != int(last_filled["montant"]):
+                    self.tele.send_message("probleme de montant:")
+                    self.tele.send_message("B1: "+str(B1))
+                    self.tele.send_message("B2: "+str(B2))
+                    self.tele.send_message("montant: "+str(last_filled["montant"]))
+                Benef1 = B1*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
+                Benef2 = B2*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled-1][0])
+                return float(Benef1+Benef2-fee_courant)
+            elif last_filled["niveau"] == 4:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                B1=ecart_bet[ID_ecart_filled-1][1]
+                B2=ecart_bet[ID_ecart_filled-2][1]
+                B3=ecart_bet[ID_ecart_filled-3][1]
+                if int(B1+B2+B3) != int(last_filled["montant"]):
+                    self.tele.send_message("probleme de montant:")
+                    self.tele.send_message("B1: "+str(B1))
+                    self.tele.send_message("B2: "+str(B2))
+                    self.tele.send_message("B3: "+str(B3))
+                    self.tele.send_message("montant: "+str(last_filled["montant"]))
+                Benef1 = B1*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
+                Benef2 = B2*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled-1][0])
+                Benef3 = B3*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled-2][0])
+                return float(Benef1+Benef2+Benef3-fee_courant)
+
+        elif last_filled["sens"]=="BUY":
+            if last_filled["niveau"] == 1 or last_filled["niveau"] == 2:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                return float(-fee_courant)
+
+            elif last_filled["niveau"] == 3:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                B1=ecart_bet[ID_ecart_filled][1]        #B1 utilise uniquement pour la verification
+                B2=ecart_bet[ID_ecart_filled+1][1]
+                if int(B1+B2) != int(last_filled["montant"]):
+                    self.tele.send_message("probleme de montant:")
+                    self.tele.send_message("B1: "+str(B1))
+                    self.tele.send_message("B2: "+str(B2))
+                    self.tele.send_message("montant: "+str(last_filled["montant"]))
+                Benef2 = B2 * (ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
+                return float(Benef2-fee_courant)
+            
+            elif last_filled["niveau"] == 4:
+                fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
+                B1=ecart_bet[ID_ecart_filled][1]        #B1 utilise uniquement pour la verification
+                B2=ecart_bet[ID_ecart_filled+1][1]
+                B3=ecart_bet[ID_ecart_filled+2][1]
+                if int(B1+B2+B3) != int(last_filled["montant"]):
+                    self.tele.send_message("probleme de montant:")
+                    self.tele.send_message("B1: "+str(B1))
+                    self.tele.send_message("B2: "+str(B2))
+                    self.tele.send_message("B3: "+str(B3))
+                    self.tele.send_message("montant: "+str(last_filled["montant"]))
+                Benef2 = B2 * (ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
+                Benef3 = B3 * (ecart_bet[ID_ecart_filled+2][0]-ecart_bet[ID_ecart_filled][0])
+                return float(Benef2+Benef3-fee_courant)
+    
+
     def update_order_benef(self,ID,benef):
         benef_round= str(round(float(benef),8))
         try:
@@ -802,7 +911,7 @@ class sqlAcces():
         for ID in range(len(ec_b)-ID_courant-1):
             benef = self.get_calcul_benef_with_ID(symbol,ID+ID_courant+1)
             #breakpoint()
-            if benef/ec_b[ID+ID_courant+1][0] < (local + UP):
+            if 0.9*benef/ec_b[ID+ID_courant+1][0] < (local + UP):
                 return ID+ID_courant+1
             
     def get_calcul_benef_with_ID(self,symbol,ID):
@@ -813,29 +922,7 @@ class sqlAcces():
         return benef
 
     def arrangement_DB(self,symbol):
-        tab = {95:24,
-               97:24,
-               99:24,
-               100:12,
-               101:14,
-               102:39,
-               103:9,
-               104:7,
-               106:3,
-               108:6,
-               132:-10,
-               133:-10,
-               134:-10,
-               135:-10,
-               136:-10,
-               137:-10,
-               138:-10,
-               139:-10,
-               140:-10,
-               141:-10,
-               142:-10,
-               143:-10,
-               144:-6}
+        tab = {124:4}
         keys = tab.keys()
         for key in keys:
             print(key)
@@ -904,8 +991,11 @@ def main():
     ecart_bet = sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
     breakpoint()"""
     #sql.arrangement_DB("XRPEUR")
-    sql.set_ecart_bet("ETHEUR.csv")
-    sql.set_ajout("ETHEUR_Ajout.csv")
+    #sql.set_ecart_bet("PEPEEUR_2.csv")
+    #sql.set_ajout("PEPEEUR_2_Ajout.csv")
+    #sql.set_ecart_bet("PEPEEUR_3.csv")
+    #sql.set_ajout("PEPEEUR_3_Ajout.csv")
+    #toto = sql.get_ecart_bet_from_symbol("XRPEUR")
     #sql.ajout_up_bet("XRPEUR",15,4)
 if __name__ == '__main__':
      main()
