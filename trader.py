@@ -29,55 +29,55 @@ class Basics():
                 prix_proche_ID = key
         return prix_proche_ID
 
-    def initialise(self,symbol,ID_user):
+    def initialise(self,symbol,ID_client):
         GO = False
-        ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol,ID_user)
+        ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol,ID_client)
         if len(ordres_ouverts) == 2:
-            changement = self.bin.changement_status(symbol,ID_user)
+            changement = self.bin.changement_status(symbol,ID_client)
             print("changement : "+ str(changement))
             if changement == []:
                 GO = True
             else:
-                self.bin.changement_update(changement,symbol)
+                self.bin.changement_update(changement,symbol,ID_client)
         print(symbol + "\tGO : "+str(GO))
         if GO == False:
-            changement = self.bin.changement_status(symbol,ID_user)
-            self.bin.changement_update(changement,symbol)
-            ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol,ID_user)
+            changement = self.bin.changement_status(symbol,ID_client)
+            self.bin.changement_update(changement,symbol,ID_client)
+            ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol,ID_client)
             for ordre_ouvert in ordres_ouverts:
-                self.bin.cancel_order(ordre_ouvert["ID"])
-            last_close = self.sql.get_last_filled(symbol)
+                self.bin.cancel_order(ordre_ouvert["ID"],ID_client)
+            last_close = self.sql.get_last_filled(symbol,ID_client)
             if last_close != "":
                 ID_ecart_last_close = last_close["ID_ecart"]
             else:
                 ID_ecart_last_close = self.plus_proche(symbol)
             print(ID_ecart_last_close)
             #breakpoint()
-            self.bin.new_vente(symbol,ID_ecart_last_close)
-            self.bin.new_achat(symbol,ID_ecart_last_close)
+            self.bin.new_vente(symbol,ID_ecart_last_close,ID_client)
+            self.bin.new_achat(symbol,ID_ecart_last_close,ID_client)
 
-    def verification_2_ordres_V2(self,symbol,ID_user):
+    def verification_2_ordres_V2(self,symbol,ID_client):
         try:
-            changement = self.bin.changement_status(symbol,ID_user)
-            self.bin.changement_update(changement,symbol)
-            ordres_new = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol,ID_user)
-            ordres_partial = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_PARTIALLY_FILLED,symbol,ID_user)
+            changement = self.bin.changement_status(symbol,ID_client)
+            self.bin.changement_update(changement,symbol,ID_client)
+            ordres_new = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol,ID_client)
+            ordres_partial = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_PARTIALLY_FILLED,symbol,ID_client)
             ordres_DB = ordres_partial + ordres_new
 
             if len(ordres_DB) ==1 :
                 if len(ordres_new) == 1:
-                    last_filled = self.sql.get_last_filled(symbol)
+                    last_filled = self.sql.get_last_filled(symbol,ID_client)
                     self.sql.calcul_benefice(symbol,last_filled)
                     self.sql.add_bet_after_sell(symbol,last_filled)
                     self.tele.send_message("FILLED "+symbol+" :"+str(last_filled["sens"])+"\n"+str(last_filled["montant_execute"]))
                     self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un NEW : "+str(ordres_DB),symbol)
-                    self.un_ordre_filled_autre_new(ordres_DB,symbol)
+                    self.un_ordre_filled_autre_new(ordres_DB,symbol,ID_client)
                     self.sheet.update_all_info(symbol)
                     # un ordre ferme et un NEW
                 elif len(ordres_partial) == 1:
                     self.tele.send_message("nouvel ordre avec un partial FILLED")
                     self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un PARTIALY : "+str(ordres_DB),symbol)
-                    self.un_ordre_filled_autre_partial(ordres_partial,symbol)
+                    self.un_ordre_filled_autre_partial(ordres_partial,symbol,ID_client)
                     # un ordre ferme et l autre partialy FILLED
             elif len(ordres_DB) == 0 :
                 self.tele.send_message("deux ordres clos en meme temps")
@@ -90,30 +90,30 @@ class Basics():
             self.sql.new_log_debug("Ordres V2",str(inst),symbol)
             return inst
 
-    def un_ordre_filled_autre_new(self,ordres_ouvert,symbol):
+    def un_ordre_filled_autre_new(self,ordres_ouvert,symbol,ID_client):
         for ordre_ouvert in ordres_ouvert:
-            self.bin.cancel_order(ordre_ouvert["ID"])
-        last_filled_order = self.sql.get_last_filled(symbol)
+            self.bin.cancel_order(ordre_ouvert["ID"],ID_client)
+        last_filled_order = self.sql.get_last_filled(symbol,ID_client)
         self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
-        self.bin.new_achat(symbol,last_filled_order["ID_ecart"])
-        self.bin.new_vente(symbol,last_filled_order["ID_ecart"])
+        self.bin.new_achat(symbol,last_filled_order["ID_ecart"],ID_client)
+        self.bin.new_vente(symbol,last_filled_order["ID_ecart"],ID_client)
         self.kpi.reste_sur_limites(symbol)
 
-    def un_ordre_filled_autre_partial(self,ordres_partiel,symbol):
+    def un_ordre_filled_autre_partial(self,ordres_partiel,symbol,ID_client):
         #breakpoint()
         #keys = ordres_partiel.keys()
         for ordre in ordres_partiel:
-            self.bin.cancel_order(ordre["ID"])
+            self.bin.cancel_order(ordre["ID"],ID_client)
             sens = ordre["sens"]
             if sens == self.bin.client.SIDE_BUY:
-                self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_SELL)
+                self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_SELL,ID_client)
             if sens == self.bin.client.SIDE_SELL:
-                self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_BUY)
-        last_filled_order = self.sql.get_last_filled(symbol)
+                self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_BUY,ID_client)
+        last_filled_order = self.sql.get_last_filled(symbol,ID_client)
         self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
 
-        self.bin.new_achat(symbol,last_filled_order["ID_ecart"])
-        self.bin.new_vente(symbol,last_filled_order["ID_ecart"])
+        self.bin.new_achat(symbol,last_filled_order["ID_ecart"],ID_client)
+        self.bin.new_vente(symbol,last_filled_order["ID_ecart"],ID_client)
         self.kpi.reste_sur_limites(symbol)
 
     def deux_ordres_filled(self,symbol):
@@ -138,8 +138,8 @@ class Basics():
                                   last_filled_order_sell["ID_ecart"]+1,
                                   0)
 
-    def verification_niveau_VS_timer(self,symbol,ID_user):
-        niveaux = self.sql.get_time_since_open(symbol,ID_user)
+    def verification_niveau_VS_timer(self,symbol,ID_client):
+        niveaux = self.sql.get_time_since_open(symbol,ID_client)
         keys = niveaux.keys()
         for key in keys:
             #Delais d attente de 30 min pour un ordre niveau 4

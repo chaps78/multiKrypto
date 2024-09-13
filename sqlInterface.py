@@ -158,9 +158,10 @@ class sqlAcces():
         #breakpoint()
         return ret[0]
 
-    def get_last_filled(self,symbol):
+    def get_last_filled(self,symbol,ID_client):
         try:
-            res = self.cur.execute("SELECT *, MAX(date_debut) FROM Ordres WHERE status='FILLED' AND type='LIMIT' AND symbol='"+str(symbol)+"'")
+            res = self.cur.execute("SELECT *, MAX(date_debut) FROM Ordres WHERE status='FILLED' AND type='LIMIT' AND symbol='"
+                                   +str(symbol)+"' AND ID_client='"+str(ID_client)+"'")
         except sqlite3.IntegrityError as inst:
             self.new_log_error("get_last_filled_SQL",str(inst),symbol)
             return ""
@@ -736,7 +737,7 @@ class sqlAcces():
             res = self.cur.execute("SELECT SUM(benefice) FROM Ordres WHERE symbol='"
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("get_gain_jour_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -748,7 +749,7 @@ class sqlAcces():
             res = self.cur.execute("SELECT SUM(benefice) FROM Ordres WHERE symbol='"
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("get_gain_mois_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -760,7 +761,7 @@ class sqlAcces():
             res = self.cur.execute("SELECT MIN(ID_ecart) FROM Ordres WHERE sens='SELL' AND status='FILLED' AND symbol='"
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("min_sell_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -774,7 +775,7 @@ class sqlAcces():
             res = self.cur.execute("SELECT MAX(ID_ecart) FROM Ordres WHERE sens='SELL' AND status='FILLED' AND symbol='"
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("max_sell_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -787,7 +788,7 @@ class sqlAcces():
             res = self.cur.execute("SELECT MIN(ID_ecart) FROM Ordres WHERE sens='BUY' AND status='FILLED' AND symbol='"
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("min_buy_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -800,7 +801,7 @@ class sqlAcces():
             res = self.cur.execute("SELECT MAX(ID_ecart) FROM Ordres WHERE sens='BUY' AND status='FILLED' AND symbol='"
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("max_buy_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -815,7 +816,7 @@ class sqlAcces():
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
                                    +" AND niveau<3" )
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("count_sell_ID_ecart_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -826,7 +827,7 @@ class sqlAcces():
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
                                    +" AND niveau=3" )
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("count_sell_ID_ecart_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -837,7 +838,7 @@ class sqlAcces():
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
                                    +" AND niveau=4" )
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("count_sell_ID_ecart_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -853,7 +854,7 @@ class sqlAcces():
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
                                    +" AND niveau<3" )
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("count_buy_ID_ecart_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -864,7 +865,7 @@ class sqlAcces():
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
                                    +" AND niveau=3" )
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("count_buy_ID_ecart_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -875,7 +876,7 @@ class sqlAcces():
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%' AND ID_ecart='"+str(ID_ecart)+"'"
                                    +" AND niveau=4" )
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_last_filled_SQL",str(inst),symbol)
+            self.new_log_error("count_buy_ID_ecart_SQL",str(inst),symbol)
             return ""
         self.con.commit()
         ordres = res.fetchall()
@@ -924,7 +925,30 @@ class sqlAcces():
         return benef
 
     def arrangement_DB(self,symbol):
-        tab = {124:4}
+        tab = {93:47,
+               94:2,
+               95:41,
+               96:21,
+               97:42,
+               98:28,
+               99:28,
+               100:28,
+               101:42,
+               102:21,
+               103:42,
+               104:21,
+               105:6,
+               106:14,
+               107:14,
+               115:1,
+               116:14,
+               117:21,
+               118:1,
+               119:7,
+               120:8,
+               121:20,
+               122:10,
+               124:16}
         keys = tab.keys()
         for key in keys:
             print(key)
