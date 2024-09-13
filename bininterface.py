@@ -7,10 +7,14 @@ from sqlInterface import sqlAcces
 
 class binAcces():
     def __init__(self):
+        self.sql = sqlAcces()
+        clients_infos = self.sql.get_clients_infos()
         with open('bin_key.json') as json_file:
             config = json.load(json_file)
         self.client = Client(config["api"], config["secret"])
-        self.sql = sqlAcces()
+        self.clients={}
+        for key in clients_infos.keys():
+            self.clients[key]=Client(clients_infos[key]["api"], clients_infos[key]["secret"])
 
     def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,niveau=1):
         try:
@@ -46,7 +50,15 @@ class binAcces():
             self.sql.new_log_error("new_limite_order_Binance",str(inst),symbol)
             return ""
         
-        self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart,UP,niveau)
+        ####################################################
+        #          ID a changer !!!!                       #
+        ####################################################
+        ID_client=1
+        ####################################################
+        #          ID a changer !!!!                       #
+        ####################################################
+        
+        self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart,UP,ID_client,niveau)
         return response["orderId"]
     
 
@@ -218,8 +230,15 @@ class binAcces():
         except Exception as inst:
             self.sql.new_log_error("new_market_order_Binance",str(inst),symbol)
             return ""
+        ####################################################
+        #          ID a changer !!!!                       #
+        ####################################################
+        ID_client=1
+        ####################################################
+        #          ID a changer !!!!                       #
+        ####################################################
         
-        self.sql.new_order(response["orderId"],symbol,montant,"",response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_MARKET,sens,0,0)
+        self.sql.new_order(response["orderId"],symbol,montant,"",response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_MARKET,sens,0,0,ID_client)
         return response["orderId"]
         
 
@@ -239,10 +258,10 @@ class binAcces():
     #  Regarde les differences entre des ordres donnes et ce qu il y a sur binance
     #  Renvoi les differences
     #######################################
-    def changement_status(self,symbol):
+    def changement_status(self,symbol,ID_client):
         try:
-            ordres_new = self.sql.get_orders_status_symbol_filter(self.client.ORDER_STATUS_NEW,symbol)
-            ordres_partial = self.sql.get_orders_status_symbol_filter(self.client.ORDER_STATUS_PARTIALLY_FILLED,symbol)
+            ordres_new = self.sql.get_orders_status_symbol_filter(self.client.ORDER_STATUS_NEW,symbol,ID_client)
+            ordres_partial = self.sql.get_orders_status_symbol_filter(self.client.ORDER_STATUS_PARTIALLY_FILLED,symbol,ID_client)
             ordres_DB = ordres_partial + ordres_new
             symbol_splited = symbol.split("_")[0]
             orders_Binance = self.client.get_all_orders(symbol=symbol_splited)

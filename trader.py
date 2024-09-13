@@ -29,11 +29,11 @@ class Basics():
                 prix_proche_ID = key
         return prix_proche_ID
 
-    def initialise(self,symbol):
+    def initialise(self,symbol,ID_user):
         GO = False
-        ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
+        ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol,ID_user)
         if len(ordres_ouverts) == 2:
-            changement = self.bin.changement_status(symbol)
+            changement = self.bin.changement_status(symbol,ID_user)
             print("changement : "+ str(changement))
             if changement == []:
                 GO = True
@@ -41,9 +41,9 @@ class Basics():
                 self.bin.changement_update(changement,symbol)
         print(symbol + "\tGO : "+str(GO))
         if GO == False:
-            changement = self.bin.changement_status(symbol)
+            changement = self.bin.changement_status(symbol,ID_user)
             self.bin.changement_update(changement,symbol)
-            ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
+            ordres_ouverts = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol,ID_user)
             for ordre_ouvert in ordres_ouverts:
                 self.bin.cancel_order(ordre_ouvert["ID"])
             last_close = self.sql.get_last_filled(symbol)
@@ -56,12 +56,12 @@ class Basics():
             self.bin.new_vente(symbol,ID_ecart_last_close)
             self.bin.new_achat(symbol,ID_ecart_last_close)
 
-    def verification_2_ordres_V2(self,symbol):
+    def verification_2_ordres_V2(self,symbol,ID_user):
         try:
-            changement = self.bin.changement_status(symbol)
+            changement = self.bin.changement_status(symbol,ID_user)
             self.bin.changement_update(changement,symbol)
-            ordres_new = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol)
-            ordres_partial = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_PARTIALLY_FILLED,symbol)
+            ordres_new = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_NEW,symbol,ID_user)
+            ordres_partial = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_PARTIALLY_FILLED,symbol,ID_user)
             ordres_DB = ordres_partial + ordres_new
 
             if len(ordres_DB) ==1 :
@@ -138,8 +138,8 @@ class Basics():
                                   last_filled_order_sell["ID_ecart"]+1,
                                   0)
 
-    def verification_niveau_VS_timer(self,symbol):
-        niveaux = self.sql.get_time_since_open(symbol)
+    def verification_niveau_VS_timer(self,symbol,ID_user):
+        niveaux = self.sql.get_time_since_open(symbol,ID_user)
         keys = niveaux.keys()
         for key in keys:
             #Delais d attente de 30 min pour un ordre niveau 4
@@ -164,15 +164,17 @@ def main():
     ################################################
     basic.tele.send_message("Bonjour")
     #for DEVISE in DEVISES:
-    basic.initialise("PEPEEUR_2")
-    basic.initialise("PEPEEUR_3")
+    #basic.initialise("PEPEEUR_2")
+    #basic.initialise("PEPEEUR_3")
     #    time.sleep(3)
     while True:
-        for DEVISE in DEVISES:
-            basic.verification_2_ordres_V2(DEVISE)
+        users_IDs=DEVISES.keys()
+        for user_ID in users_IDs:
+            for DEVISE in DEVISES[user_ID]:
+                basic.verification_2_ordres_V2(DEVISE,user_ID)
 
-            basic.verification_niveau_VS_timer(DEVISE)
-            time.sleep(4)
+                basic.verification_niveau_VS_timer(DEVISE,user_ID)
+                time.sleep(4)
 
 
 

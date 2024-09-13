@@ -11,10 +11,10 @@ class sqlAcces():
         self.tele = teleAcces()
 
 
-    def new_order(self,ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,flag_ajout,niveau=1,benefice=0.0):
+    def new_order(self,ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,flag_ajout,ID_client,niveau=1,benefice=0.0):
         try:
-            self.cur.execute("INSERT INTO Ordres VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                             (ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,int(niveau),int(flag_ajout),benefice))
+            self.cur.execute("INSERT INTO Ordres VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                             (ID,symbol,montant,limite,status,date_debut,date_fin,montant_exec,type,sens,ID_ecart,int(niveau),int(flag_ajout),benefice,ID_client))
         except sqlite3.IntegrityError as inst:
             self.new_log_error("new_order_SQL",str(inst),symbol)
             return inst
@@ -44,9 +44,9 @@ class sqlAcces():
         return retour
 
 
-    def get_orders_status_symbol_filter(self,status,symbol):
+    def get_orders_status_symbol_filter(self,status,symbol,ID_client):
         try:
-            res = self.cur.execute("SELECT * FROM Ordres WHERE status=? AND symbol=?",(str(status),str(symbol)))
+            res = self.cur.execute("SELECT * FROM Ordres WHERE status=? AND symbol=? AND ID_client=?",(str(status),str(symbol),str(ID_client)))
 
         except sqlite3.IntegrityError as inst:
             self.new_log_error("get_orders_status_filter_SQL",str(inst),symbol)
@@ -58,8 +58,8 @@ class sqlAcces():
         return ordres
 
 
-    def get_time_since_open(self,symbol):
-        ordres_ouverts = self.get_orders_status_symbol_filter("NEW",symbol)
+    def get_time_since_open(self,symbol,ID_user):
+        ordres_ouverts = self.get_orders_status_symbol_filter("NEW",symbol,ID_user)
         retour = {}
         for ordre_ouvert in ordres_ouverts:
             retour[ordre_ouvert["ID"]] = {"time":((datetime.now(timezone.utc)-datetime.fromisoformat(ordre_ouvert["date_debut"]))),
@@ -402,13 +402,15 @@ class sqlAcces():
             res = self.cur.execute("SELECT * FROM Devises WHERE actif=1")
 
         except sqlite3.IntegrityError as inst:
-            self.new_log_error("get_symbols_SQL",str(inst),"GET_SYMBOL")
+            self.new_log_error("get_symbols_actifs_SQL",str(inst),"GET_SYMBOL")
             return inst
         devises_SQL = res.fetchall()
 
-        devises_ret=[]
+        devises_ret={}
         for devise_SQL in devises_SQL:
-            devises_ret.append(devise_SQL[0])
+            devises_ret[devise_SQL[8]]=[]
+        for devise_SQL in devises_SQL:
+            devises_ret[devise_SQL[8]].append(devise_SQL[0])
         return devises_ret
 
     def get_devises_from_symbol(self,symbol):
@@ -935,9 +937,26 @@ class sqlAcces():
             self.add_to_ajout(symbol,key,tab[key])
             #self
 
+    def get_clients_infos(self):
+        try:
+            res = self.cur.execute("SELECT * FROM client")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_clients_infos",str(inst),"NA")
+            return inst
+        self.con.commit()
+        clients = res.fetchall()
+        clients_infos={}
+        for client in clients:
+            clients_infos[client[0]]={}
+            clients_infos[client[0]]["api"]=client[2]
+            clients_infos[client[0]]["secret"]=client[3]
+
+        return clients_infos
+
 def main():
     sql = sqlAcces()
     DEVISE='XRPEUR'
+    sql.get_symbols_actif()
 
     #sql.add_ajout_to_ecart(DEVISE)
     #print(sql.get_ajout_flag(DEVISE))
