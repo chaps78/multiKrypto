@@ -1,18 +1,24 @@
 import telebot
 import json
 
-with open('bin_key.json') as json_file:
-    config = json.load(json_file)
 
-TELEG_TOKEN = config["telegram_token"]
-#Id du chat pour le BOT telegram
-BOT_CHAT_ID = config["chat_id"]
 
 
 class teleAcces():
-    def send_message(self,message):
-        bot = telebot.TeleBot(TELEG_TOKEN)
-        bot.send_message(BOT_CHAT_ID, message)
+    def __init__(self):
+        with open('bin_key.json') as json_file:
+            config = json.load(json_file)
+
+        self.TELEG_TOKEN = config["telegram_token"]
+        #Id du chat pour le BOT telegram
+        self.BOT_CHAT_ID = config["chat_id"]
+
+
+    def send_message(self,message,ID_chat=0):
+        if ID_chat==0:
+            ID_chat = self.BOT_CHAT_ID
+        bot = telebot.TeleBot(self.TELEG_TOKEN)
+        bot.send_message(ID_chat, message)
 
 def main():
     tele = teleAcces()

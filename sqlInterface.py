@@ -167,7 +167,7 @@ class sqlAcces():
             return ""
         self.con.commit()
         ordres = res.fetchall()
-        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None, None):
+        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None):
             return ""
         ordre = self.convert_fetch_to_dico(ordres[0])
         return ordre
@@ -180,7 +180,7 @@ class sqlAcces():
             return ""
         self.con.commit()
         ordres = res.fetchall()
-        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None, None):
+        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None):
             return ""
         ordre = self.convert_fetch_to_dico(ordres[0])
         return ordre
@@ -193,7 +193,7 @@ class sqlAcces():
             return ""
         self.con.commit()
         ordres = res.fetchall()
-        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None, None):
+        if ordres[0] == (None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None):
             return ""
         ordre = self.convert_fetch_to_dico(ordres[0])
         return ordre
@@ -251,8 +251,8 @@ class sqlAcces():
         self.update_bet_with_ID(symbol,ID_UP,ecart_tab[ID_UP][1]-qtt)
         return ID_down
     
-    def ajout_benef_paire_devise(self,symbol,qtt):
-        epargne = self.get_devises_from_symbol(symbol)["epargne"]
+    def ajout_benef_paire_devise(self,symbol,qtt,ID_client):
+        epargne = self.get_devises_from_symbol(symbol,ID_client)["epargne"]
         try:
             self.cur.execute("UPDATE Devises SET epargne=? WHERE symbol=?",
                              (qtt+epargne,symbol))
@@ -307,9 +307,9 @@ class sqlAcces():
         benef = delta*float(montant)-2*FEE*float(montant)*float(limite)
         return benef
 
-    def add_bet_after_sell(self,symbol,last_filled):
+    def add_bet_after_sell(self,symbol,last_filled,ID_client):
         if last_filled["sens"] == "SELL":
-            infos_devise = self.get_devises_from_symbol(symbol)
+            infos_devise = self.get_devises_from_symbol(symbol,ID_client)
             ajout_qtt = infos_devise["local"]
             UP = infos_devise["up"]
             current_bet = self.get_ecart_bet_from_symbol_and_ID(symbol,float(last_filled["ID_ecart"])-1)[3]
@@ -329,12 +329,12 @@ class sqlAcces():
                     #self.tele.send_message("vente avec benef_ratio > ajout_qtt " + str(benef_ratio))
                     self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+ajout_qtt)
                     self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt)
-                    self.ajout_benef_paire_devise(symbol,(benef_ratiounique_fee-ajout_qtt)*last_filled["limite"])
+                    self.ajout_benef_paire_devise(symbol,(benef_ratiounique_fee-ajout_qtt)*last_filled["limite"],ID_client)
                 else:
                     #self.tele.send_message("vente avec benef_ratio > ajout_qtt + UP " + str(benef_ratio))
                     self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+ajout_qtt)
                     self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,ajout_qtt)
-                    self.ajout_benef_paire_devise(symbol,(benef_ratiounique_fee-ajout_qtt-UP)*last_filled["limite"])
+                    self.ajout_benef_paire_devise(symbol,(benef_ratiounique_fee-ajout_qtt-UP)*last_filled["limite"],ID_client)
                     self.ajout_up_bet(symbol,int(last_filled["ID_ecart"])-1,UP)
             elif int(last_filled["niveau"]) == 3:
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+2)
@@ -347,7 +347,7 @@ class sqlAcces():
                 epargne = benef_sans_add - 2 * ec_bet[last_filled["ID_ecart"]-1][0]
                 epargne += -ec_bet[last_filled["ID_ecart"]-2][0]
 
-                self.ajout_benef_paire_devise(symbol,epargne)
+                self.ajout_benef_paire_devise(symbol,epargne,ID_client)
             elif int(last_filled["niveau"]) == 4:
                 self.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,int(current_bet)+2)
                 self.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,2)
@@ -362,10 +362,10 @@ class sqlAcces():
                 epargne = benef_sans_add - 3 * ec_bet[last_filled["ID_ecart"]-1][0]
                 epargne += - 2 * ec_bet[last_filled["ID_ecart"]-2][0]
                 epargne += - ec_bet[last_filled["ID_ecart"]-3][0]
-                self.ajout_benef_paire_devise(symbol,epargne)
+                self.ajout_benef_paire_devise(symbol,epargne,ID_client)
         elif last_filled["sens"] == "BUY":
             benef_sans_add =self.get_calcul_benefice(symbol,last_filled)
-            self.ajout_benef_paire_devise(symbol,benef_sans_add)
+            self.ajout_benef_paire_devise(symbol,benef_sans_add,ID_client)
     def convert_fetch_to_dico(self,ordre):
         ordre_dico = {"ID":ordre[0],
                       "symbol":ordre[1],
@@ -398,6 +398,20 @@ class sqlAcces():
             devises_ret.append(devise_SQL[0])
         return devises_ret
     
+    def get_symbols_client(self,ID_client):
+        try:
+            res = self.cur.execute("SELECT * FROM Devises WHERE client='"+str(ID_client)+"'")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_symbols_SQL",str(inst),"GET_SYMBOL")
+            return inst
+        devises_SQL = res.fetchall()
+
+        devises_ret=[]
+        for devise_SQL in devises_SQL:
+            devises_ret.append(devise_SQL[0])
+        return devises_ret
+    
     def get_symbols_actif(self):
         try:
             res = self.cur.execute("SELECT * FROM Devises WHERE actif=1")
@@ -414,22 +428,25 @@ class sqlAcces():
             devises_ret[devise_SQL[8]].append(devise_SQL[0])
         return devises_ret
 
-    def get_devises_from_symbol(self,symbol):
+    def get_devises_from_symbol(self,symbol,ID_client):
         try:
-            res = self.cur.execute("SELECT * FROM Devises WHERE symbol='"+str(symbol)+"'")
+            res = self.cur.execute("SELECT * FROM Devises WHERE symbol='"+str(symbol)+"' and client='"+str(ID_client)+"'")
 
         except sqlite3.IntegrityError as inst:
             self.new_log_error("get_devises_from_symbol_SQL",str(inst),symbol)
             return inst
-        devises = res.fetchall()[0]
-        formated_devises = [devises[1],devises[2]]
-        formated_devises = {"devise1":devises[1],
-                            "devise2":devises[2],
-                            "down":devises[3],
-                            "local":devises[4],
-                            "up":devises[5],
-                            "epargne":devises[6]
-                            }
+        try:
+            devises = res.fetchall()[0]
+            formated_devises = [devises[1],devises[2]]
+            formated_devises = {"devise1":devises[1],
+                                "devise2":devises[2],
+                                "down":devises[3],
+                                "local":devises[4],
+                                "up":devises[5],
+                                "epargne":devises[6]
+                                }
+        except:
+            return ""
         return(formated_devises)
 
     def set_KPI_restes(self,symbol,restes,last_ID,EUR,XRP,XRP_Prix,DOGE,DOGE_Prix,BTC,BTC_Prix,Total,ETH,ETH_Prix,PEPE,PEPE_Prix):
@@ -906,8 +923,8 @@ class sqlAcces():
             return inst
         self.con.commit()
 
-    def get_ID_to_UP(self,symbol,ID_courant):
-        devises = self.get_devises_from_symbol(symbol)
+    def get_ID_to_UP(self,symbol,ID_courant,ID_client):
+        devises = self.get_devises_from_symbol(symbol,ID_client)
         local = devises["local"]
         UP = devises["up"]
         ec_b = self.get_ecart_bet_from_symbol(symbol)
@@ -972,8 +989,10 @@ class sqlAcces():
         clients_infos={}
         for client in clients:
             clients_infos[client[0]]={}
+            clients_infos[client[0]]["name"]=client[1]
             clients_infos[client[0]]["api"]=client[2]
             clients_infos[client[0]]["secret"]=client[3]
+            clients_infos[client[0]]["tele"]=client[4]
 
         return clients_infos
 
@@ -1025,7 +1044,7 @@ def main():
     print("total: "+str(total))
     #sql.arrangement_DB("XRPEUR")"""
     """
-    sql.ajout_benef_paire_devise("XRPEUR",2.4)
+    sql.ajout_benef_paire_devise("XRPEUR",2.4,ID_client)
     infos_devise = sql.get_devises_from_symbol("DOGEEUR")
     ajout_qtt = infos_devise["local"]
     UP = infos_devise["up"]

@@ -16,9 +16,9 @@ class Basics():
         self.tele = teleAcces()
         self.sheet = sheetAcces()
 
-    def plus_proche(self,symbol):
+    def plus_proche(self,symbol,ID_client):
         ecart_bet_dic = self.sql.get_ecart_bet_from_symbol(symbol)
-        prix_tmp = self.bin.get_price(symbol)
+        prix_tmp = self.bin.get_price(symbol,ID_client)
         prix = prix_tmp["price"]
         delta = abs(float(ecart_bet_dic[0][1])-float(prix))
         prix_proche_ID=0
@@ -50,9 +50,8 @@ class Basics():
             if last_close != "":
                 ID_ecart_last_close = last_close["ID_ecart"]
             else:
-                ID_ecart_last_close = self.plus_proche(symbol)
+                ID_ecart_last_close = self.plus_proche(symbol,ID_client)
             print(ID_ecart_last_close)
-            #breakpoint()
             self.bin.new_vente(symbol,ID_ecart_last_close,ID_client)
             self.bin.new_achat(symbol,ID_ecart_last_close,ID_client)
 
@@ -68,8 +67,10 @@ class Basics():
                 if len(ordres_new) == 1:
                     last_filled = self.sql.get_last_filled(symbol,ID_client)
                     self.sql.calcul_benefice(symbol,last_filled)
-                    self.sql.add_bet_after_sell(symbol,last_filled)
-                    self.tele.send_message("FILLED "+symbol+" :"+str(last_filled["sens"])+"\n"+str(last_filled["montant_execute"]))
+                    self.sql.add_bet_after_sell(symbol,last_filled,ID_client)
+                    clients = self.sql.get_clients_infos()
+
+                    self.tele.send_message("FILLED "+symbol+" :"+str(last_filled["sens"])+"\n"+str(last_filled["montant_execute"]),clients[ID_client]["tele"])
                     self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un NEW : "+str(ordres_DB),symbol)
                     self.un_ordre_filled_autre_new(ordres_DB,symbol,ID_client)
                     self.sheet.update_all_info(symbol)
@@ -82,7 +83,7 @@ class Basics():
             elif len(ordres_DB) == 0 :
                 self.tele.send_message("deux ordres clos en meme temps")
                 self.sql.new_log_debug("verification_2_ordres_V2","deux ordres FILLED : "+str(ordres_DB),symbol)
-                self.deux_ordres_filled(symbol)
+                self.deux_ordres_filled(symbol,ID_client)
                 #Deux ordres ont ete fermes
             elif len(ordres_DB) > 2 :
                 self.sql.new_log_error("verification_2_ordres_V2_trader","probleme de trade", symbol)
@@ -97,11 +98,9 @@ class Basics():
         self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
         self.bin.new_achat(symbol,last_filled_order["ID_ecart"],ID_client)
         self.bin.new_vente(symbol,last_filled_order["ID_ecart"],ID_client)
-        self.kpi.reste_sur_limites(symbol)
+        #self.kpi.reste_sur_limites(symbol,ID_client)
 
     def un_ordre_filled_autre_partial(self,ordres_partiel,symbol,ID_client):
-        #breakpoint()
-        #keys = ordres_partiel.keys()
         for ordre in ordres_partiel:
             self.bin.cancel_order(ordre["ID"],ID_client)
             sens = ordre["sens"]
@@ -114,9 +113,9 @@ class Basics():
 
         self.bin.new_achat(symbol,last_filled_order["ID_ecart"],ID_client)
         self.bin.new_vente(symbol,last_filled_order["ID_ecart"],ID_client)
-        self.kpi.reste_sur_limites(symbol)
+        #self.kpi.reste_sur_limites(symbol,ID_client)
 
-    def deux_ordres_filled(self,symbol):
+    def deux_ordres_filled(self,symbol,ID_client):
         last_filled_order_buy = self.sql.get_last_filled_buy(symbol)
         last_filled_order_sell = self.sql.get_last_filled_sell(symbol)
         montant_interval = self.sql.get_montant_entre_ordres(symbol,
@@ -128,7 +127,8 @@ class Basics():
                                   bet_ecart[2],
                                   self.bin.client.SIDE_BUY,
                                   last_filled_order_buy["ID_ecart"]-1,
-                                  0)
+                                  0,
+                                  ID_client)
 
         bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,last_filled_order_sell["ID_ecart"]+1)
         self.bin.new_limite_order(symbol,
@@ -136,7 +136,8 @@ class Basics():
                                   bet_ecart[2],
                                   self.bin.client.SIDE_SELL,
                                   last_filled_order_sell["ID_ecart"]+1,
-                                  0)
+                                  0,
+                                  ID_client)
 
     def verification_niveau_VS_timer(self,symbol,ID_client):
         niveaux = self.sql.get_time_since_open(symbol,ID_client)
@@ -144,10 +145,10 @@ class Basics():
         for key in keys:
             #Delais d attente de 30 min pour un ordre niveau 4
             if int(niveaux[key]["niveau"]) == 4 and niveaux[key]["time"].seconds > 1800:
-                self.bin.baisser_niveau_ordre(key)
+                self.bin.baisser_niveau_ordre(key,ID_client)
             # Delas d attente de 1 heures pour un ordre de niveau 3
             if int(niveaux[key]["niveau"]) == 3 and niveaux[key]["time"].seconds > 3600:
-                self.bin.baisser_niveau_ordre(key)
+                self.bin.baisser_niveau_ordre(key,ID_client)
             # Delas d attente de 2 heures pour un ordre de niveau 2
             if int(niveaux[key]["niveau"]) == 2 and niveaux[key]["time"].seconds > 7200:
                 self.sql.baisser_niveau_ordre_SQL(key,1)
@@ -164,7 +165,7 @@ def main():
     ################################################
     basic.tele.send_message("Bonjour")
     #for DEVISE in DEVISES:
-    #basic.initialise("PEPEEUR_2")
+    #basic.initialise("XRPUSDT_nico",1)
     #basic.initialise("PEPEEUR_3")
     #    time.sleep(3)
     while True:

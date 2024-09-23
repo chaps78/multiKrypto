@@ -8,16 +8,16 @@ class Kpi():
         self.bin = binAcces()
         self.sql = sqlAcces()
 
-    def reste_sur_limites(self,symbol):
+    def reste_sur_limites(self,symbol,ID_client):
         last_filled = self.bin.sql.get_last_filled(symbol)
         devises=self.bin.sql.get_devises_from_symbol(symbol)
         #founds = self.bin.get_found([devises["devise1"],devises["devise2"]],symbol)
-        founds = self.bin.get_found(["XRP","EUR","BTC","DOGE","ETH","PEPE"],symbol)
-        XRPEUR_Price = float(self.bin.get_price("XRPEUR")["price"])
-        DOGEEUR_Price = float(self.bin.get_price("DOGEEUR")["price"])
-        BTCEUR_Price = float(self.bin.get_price("BTCEUR")["price"])
-        PEPEEUR_Price = float(self.bin.get_price("PEPEEUR")["price"])
-        ETHEUR_Price = float(self.bin.get_price("ETHEUR")["price"])
+        founds = self.bin.get_found(["XRP","EUR","BTC","DOGE","ETH","PEPE"],symbol,ID_client)
+        XRPEUR_Price = float(self.bin.get_price("XRPEUR")["price"],ID_client)
+        DOGEEUR_Price = float(self.bin.get_price("DOGEEUR")["price"],ID_client)
+        BTCEUR_Price = float(self.bin.get_price("BTCEUR")["price"],ID_client)
+        PEPEEUR_Price = float(self.bin.get_price("PEPEEUR")["price"],ID_client)
+        ETHEUR_Price = float(self.bin.get_price("ETHEUR")["price"],ID_client)
         total = founds["EUR"] + founds["XRP"] * XRPEUR_Price
         total += founds["DOGE"] * DOGEEUR_Price + founds["BTC"] * BTCEUR_Price
         total += founds["ETH"] * ETHEUR_Price + founds["PEPE"] * PEPEEUR_Price
@@ -74,23 +74,24 @@ class Kpi():
                   +":"+str(result[key]["SELL"][2]))
             
 
-    def gain_month_global(self,year,month):
+    def gain_month_global(self,year,month,ID_client):
         print("\n\n#########################################################")
         print("#              KPI YEAR "+str(year) + " MONTH "+str(month)+ "\t                #")
         print("#########################################################")
-        symbols = self.sql.get_symbols()
+        symbols = self.sql.get_symbols_client(ID_client)
         #symbols.append("PEPEEUR")
         total=0
         for symbol in symbols:
             #print("#\t\t" + symbol + "\t\t#")
             resultat = self.sql.get_gain_mois(symbol,year,month)
             if resultat != None:
-                devise_info = self.sql.get_devises_from_symbol(symbol)
+                devise_info = self.sql.get_devises_from_symbol(symbol,ID_client)
                 if devise_info["devise2"] == "EUR":
                     print("#\t" + symbol +" : \t\t## \t"+str(round(resultat,2))+" EUR  \t#")
                     total += resultat
                 else:
-                    Price = float(self.bin.get_price(devise_info["devise2"]+"EUR")["price"])
+                    #breakpoint()
+                    Price = float(self.bin.get_price(devise_info["devise2"]+"EUR",ID_client)["price"])
                     print("#\t"+symbol +" : "+ str(round(resultat,2))
                           + " " + devise_info["devise2"] 
                           + "\t## \t"+str(round(resultat*Price,2))+" EUR  \t#")
@@ -144,13 +145,18 @@ def main():
     total += resultat
     print("total: "+str(total))
     #"""
+    print("Select a client:")
+    clients_liste = sql.get_clients_infos()
+    for client in clients_liste:
+        print(str(client)+" - "+ str(clients_liste[client]["name"]))
+    ID_client = int(input("Enter your choice : "))
     print("1-Gain du mois\n2-Recap de la quantitée d'ordres")
     choice = input("Enter your choice [1-2]: ")
     if choice == '1':
-        kpi.gain_month_global(2024,6)
-        kpi.gain_month_global(2024,7)
-        kpi.gain_month_global(2024,8)
-        kpi.gain_month_global(2024,mois)
+        kpi.gain_month_global(2024,6,ID_client)
+        kpi.gain_month_global(2024,7,ID_client)
+        kpi.gain_month_global(2024,8,ID_client)
+        kpi.gain_month_global(2024,mois,ID_client)
     symbols = sql.get_symbols()
     if choice == '2':
         print("sur quelle paire?")

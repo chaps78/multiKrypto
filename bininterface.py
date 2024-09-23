@@ -16,7 +16,7 @@ class binAcces():
         for key in clients_infos.keys():
             self.clients[key]=Client(clients_infos[key]["api"], clients_infos[key]["secret"])
 
-    def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,niveau=1):
+    def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,ID_client,niveau=1):
         try:
             UP = 0
             if sens == self.client.SIDE_BUY and (niveau==1 or niveau == 2):
@@ -27,7 +27,7 @@ class binAcces():
                     self.sql.tele.send_message("Un ordre ouvert avec un ajout pour le UP d'un montant de : "+str(UP))
 
 
-            infos_devise = self.sql.get_devises_from_symbol(symbol)
+            infos_devise = self.sql.get_devises_from_symbol(symbol,ID_client)
             ajout_qtt = infos_devise["local"]
             benef = self.sql.calcul_benef_with_ID(symbol,ID_ecart,limite,montant)
             benef_ratio = benef/limite
@@ -39,24 +39,15 @@ class binAcces():
                 montant_call='%.0f' % montant
             symbol_plited = symbol.split("_")[0]
             
-            response = self.client.create_order(symbol=symbol_plited, 
+            response = self.clients[ID_client].create_order(symbol=symbol_plited, 
                                             side=sens, 
                                             type=Client.ORDER_TYPE_LIMIT, 
                                             quantity=montant_call, 
                                             price='%.8f' % limite,
                                             timeInForce='GTC')
         except Exception as inst:
-            #breakpoint()
             self.sql.new_log_error("new_limite_order_Binance",str(inst),symbol)
             return ""
-        
-        ####################################################
-        #          ID a changer !!!!                       #
-        ####################################################
-        ID_client=1
-        ####################################################
-        #          ID a changer !!!!                       #
-        ####################################################
         
         self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart,UP,ID_client,niveau)
         return response["orderId"]
@@ -81,7 +72,8 @@ class binAcces():
                                     bet_ecart[2],
                                     Client.SIDE_BUY,
                                     ID_ecart-1,
-                                    flag_ajout)
+                                    flag_ajout,
+                                    ID_client)
             else:
                 if int(last_ordre["niveau"])==1:
                     bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
@@ -96,6 +88,7 @@ class binAcces():
                                         Client.SIDE_BUY,
                                         ID_ecart-1,
                                         flag_ajout,
+                                        ID_client,
                                         2)
                 
                 elif int(last_ordre["niveau"])==2:
@@ -112,6 +105,7 @@ class binAcces():
                                         Client.SIDE_BUY,
                                         ID_ecart-2,
                                         flag_ajout,
+                                        ID_client,
                                         3)
                 else:
                     bet_ecart_1 = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
@@ -128,6 +122,7 @@ class binAcces():
                                         Client.SIDE_BUY,
                                         ID_ecart-3,
                                         flag_ajout,
+                                        ID_client,
                                         4)
         else:
             bet_ecart = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart-1)
@@ -141,7 +136,8 @@ class binAcces():
                                 bet_ecart[2],
                                 Client.SIDE_BUY,
                                 ID_ecart-1,
-                                flag_ajout)
+                                flag_ajout,
+                                ID_client)
 
 
     ###############################
@@ -149,7 +145,6 @@ class binAcces():
     ###############################
     def new_vente(self,symbol,ID_ecart,ID_client,flag_ajout=0):
         last_ordre = self.sql.get_last_filled(symbol,ID_client)
-        #breakpoint()
         if last_ordre != "":
             if last_ordre["sens"]== Client.SIDE_BUY:
                 bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
@@ -164,7 +159,8 @@ class binAcces():
                                     bet_ecart_limite[2],
                                     Client.SIDE_SELL,
                                     ID_ecart+1,
-                                    flag_ajout)
+                                    flag_ajout,
+                                    ID_client)
             else:
                 if int(last_ordre["niveau"])==1:
                     bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
@@ -180,6 +176,7 @@ class binAcces():
                                         Client.SIDE_SELL,
                                         ID_ecart+1,
                                         flag_ajout,
+                                        ID_client,
                                         2)
                 elif int(last_ordre["niveau"])==2:
                     bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+2)
@@ -191,6 +188,7 @@ class binAcces():
                                         Client.SIDE_SELL,
                                         ID_ecart+2,
                                         flag_ajout,
+                                        ID_client,
                                         3)
                 else:
                     bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+3)
@@ -203,6 +201,7 @@ class binAcces():
                                         Client.SIDE_SELL,
                                         ID_ecart+3,
                                         flag_ajout,
+                                        ID_client,
                                         4)
         else:
             bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart+1)
@@ -217,7 +216,8 @@ class binAcces():
                                 bet_ecart_limite[2],
                                 Client.SIDE_SELL,
                                 ID_ecart+1,
-                                flag_ajout)
+                                flag_ajout,
+                                ID_client)
 
 
     def new_market_order(self,symbol,montant,sens,ID_client):
@@ -230,13 +230,6 @@ class binAcces():
         except Exception as inst:
             self.sql.new_log_error("new_market_order_Binance",str(inst),symbol)
             return ""
-        ####################################################
-        #          ID a changer !!!!                       #
-        ####################################################
-        ID_client=1
-        ####################################################
-        #          ID a changer !!!!                       #
-        ####################################################
         
         self.sql.new_order(response["orderId"],symbol,montant,"",response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_MARKET,sens,0,0,ID_client)
         return response["orderId"]
@@ -276,7 +269,7 @@ class binAcces():
                             if odb["flag_ajout"] > 0:
                                 self.sql.tele.send_message("un ordre avec UP a ete execute")
                                 self.sql.set_up_bet(symbol,odb["ID_ecart"],0)
-                                ID_to_UP = self.sql.get_ID_to_UP(symbol,odb["ID_ecart"])
+                                ID_to_UP = self.sql.get_ID_to_UP(symbol,odb["ID_ecart"],ID_client)
                                 self.sql.add_to_ajout(symbol,ID_to_UP,odb["flag_ajout"])
                                 self.sql.add_to_ecart(symbol,ID_to_UP,odb["flag_ajout"])
 
@@ -303,9 +296,9 @@ class binAcces():
     # input liste des devises dont on souhaite avoir le solde
     #ex : ["EUR","DOGE","BTC"]
     #####################################
-    def get_found(self,devises,symbol):
+    def get_found(self,devises,symbol,ID_client):
         try:
-            info = self.client.get_account()
+            info = self.clients[ID_client].get_account()
             retour = {}
             for el in info["balances"]:
                 if el["asset"] in devises:
@@ -315,24 +308,40 @@ class binAcces():
             retour = ["ERROR"]
         return retour
     
+    #####################################
+    # input liste des devises dont on souhaite avoir le solde
+    #ex : ["EUR","DOGE","BTC"]
+    #####################################
+    def get_wallet(self,ID_client):
+        try:
+            wallet=[]
+            info = self.clients[ID_client].get_account()
+            for el in info["balances"]:
+                if float(el["free"]) > 0:
+                    wallet.append(el)
+        except Exception as inst:
+            self.sql.new_log_error("get_found_Binance",str(inst),"NA")
+            retour = ["ERROR"]
+        return wallet
     
-    def get_price(self,symbol):
+    
+    def get_price(self,symbol,ID_client):
         try:
             symbol_split = symbol.split("_")[0]
-            result = self.client.get_symbol_ticker(symbol=symbol_split)
+            result = self.clients[ID_client].get_symbol_ticker(symbol=symbol_split)
         except Exception as inst:
             self.sql.new_log_error("get_price_Binance",str(inst),symbol)
             return "ERROR"
         return result
     
-    def baisser_niveau_ordre(self,ID_ordre):
+    def baisser_niveau_ordre(self,ID_ordre,ID_client):
         ordre = self.sql.get_order_info_by_ID(ID_ordre)
         if ordre["sens"] == self.client.SIDE_BUY:
-            self.baisse_niveau_achat(ordre)
+            self.baisse_niveau_achat(ordre,ID_client)
         if ordre["sens"] == self.client.SIDE_SELL:
-            self.baisse_niveau_vente(ordre)
+            self.baisse_niveau_vente(ordre,ID_client)
     
-    def baisse_niveau_achat(self,ordre):
+    def baisse_niveau_achat(self,ordre,ID_client):
         if ordre["niveau"] == 4:
             self.cancel_order(ordre["ID"],ID_client)
             bet_ecart_1 = self.sql.get_ecart_bet_from_symbol_and_ID(ordre["symbol"],int(ordre["ID_ecart"])+1)
@@ -343,6 +352,7 @@ class binAcces():
                                   ordre["sens"],
                                   int(ordre["ID_ecart"])+1,
                                   ordre["flag_ajout"],
+                                  ID_client,
                                   3)
         elif ordre["niveau"] == 3:
             self.cancel_order(ordre["ID"],ID_client)
@@ -353,9 +363,10 @@ class binAcces():
                                   ordre["sens"],
                                   int(ordre["ID_ecart"])+1,
                                   ordre["flag_ajout"],
+                                  ID_client,
                                   1)
 
-    def baisse_niveau_vente(self,ordre):
+    def baisse_niveau_vente(self,ordre,ID_client):
         if ordre["niveau"] == 4:
             self.cancel_order(ordre["ID"],ID_client)
             bet_ecart_limite = self.sql.get_ecart_bet_from_symbol_and_ID(ordre["symbol"],int(ordre["ID_ecart"])-1)
@@ -367,6 +378,7 @@ class binAcces():
                                       ordre["sens"],
                                       int(ordre["ID_ecart"])-1,
                                       ordre["flag_ajout"],
+                                      ID_client,
                                       3)
         elif ordre["niveau"] == 3:
             self.cancel_order(ordre["ID"],ID_client)
@@ -378,6 +390,7 @@ class binAcces():
                                       ordre["sens"],
                                       int(ordre["ID_ecart"])-1,
                                       ordre["flag_ajout"],
+                                      ID_client,
                                       1)
 
 
