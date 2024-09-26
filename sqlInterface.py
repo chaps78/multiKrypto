@@ -1053,8 +1053,8 @@ def main():
     ecart_bet = sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
     breakpoint()"""
     #sql.arrangement_DB("XRPEUR")
-    #sql.set_ecart_bet("PEPEEUR_2.csv")
-    #sql.set_ajout("PEPEEUR_2_Ajout.csv")
+    #sql.set_ecart_bet("EURUSDT_seb.csv")
+    #sql.set_ajout("EURUSDT_seb_ajout.csv")
     #sql.set_ecart_bet("PEPEEUR_3.csv")
     #sql.set_ajout("PEPEEUR_3_Ajout.csv")
     #toto = sql.get_ecart_bet_from_symbol("XRPEUR")

@@ -165,7 +165,7 @@ def main():
     ################################################
     basic.tele.send_message("Bonjour")
     #for DEVISE in DEVISES:
-    #basic.initialise("XRPUSDT_nico",1)
+    #basic.initialise("EURUSDT_seb",3)
     #basic.initialise("PEPEEUR_3")
     #    time.sleep(3)
     while True:
