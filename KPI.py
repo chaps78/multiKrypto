@@ -1,5 +1,6 @@
 from bininterface import binAcces
 from sqlInterface import sqlAcces
+from datetime import datetime
 
 
 class Kpi():
@@ -79,6 +80,7 @@ class Kpi():
         print("#              KPI YEAR "+str(year) + " MONTH "+str(month)+ "\t                #")
         print("#########################################################")
         symbols = self.sql.get_symbols_client(ID_client)
+        base_client = self.sql.get_clients_infos()[ID_client]["base"]
         #symbols.append("PEPEEUR")
         total=0
         for symbol in symbols:
@@ -86,19 +88,20 @@ class Kpi():
             resultat = self.sql.get_gain_mois(symbol,year,month)
             if resultat != None:
                 devise_info = self.sql.get_devises_from_symbol(symbol,ID_client)
-                if devise_info["devise2"] == "EUR":
-                    print("#\t" + symbol +" : \t\t## \t"+str(round(resultat,2))+" EUR  \t#")
+                if devise_info["devise2"] == base_client:
+                    print("#\t" + symbol +" : \t\t## \t"+str(round(resultat,2))+" "+base_client+"  \t#")
                     total += resultat
                 else:
                     #breakpoint()
-                    Price = float(self.bin.get_price(devise_info["devise2"]+"EUR",ID_client)["price"])
+                    Price = float(self.bin.get_price(devise_info["devise2"]+base_client,ID_client)["price"])
                     print("#\t"+symbol +" : "+ str(round(resultat,2))
                           + " " + devise_info["devise2"] 
-                          + "\t## \t"+str(round(resultat*Price,2))+" EUR  \t#")
+                          + "\t## \t"+str(round(resultat*Price,2))+" "+base_client+"  \t#")
                     total+=resultat*Price
         print("#########################################################")
         print("#\t\t\tTOTAL : "+ str(round(total,2))+ "\t\t\t#")
         print("#########################################################")
+        return total
 
 
 
@@ -153,10 +156,17 @@ def main():
     print("1-Gain du mois\n2-Recap de la quantitée d'ordres")
     choice = input("Enter your choice [1-2]: ")
     if choice == '1':
-        kpi.gain_month_global(2024,6,ID_client)
-        kpi.gain_month_global(2024,7,ID_client)
-        kpi.gain_month_global(2024,8,ID_client)
-        kpi.gain_month_global(2024,mois,ID_client)
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        nbr_mois = int(input("combien de mois de rétro: "))
+        somme = 0
+        for i in range(nbr_mois):
+            if current_month-i<0:
+                current_year -=1
+                current_month +=12
+            somme += kpi.gain_month_global(current_year,current_month-(nbr_mois-i-1),ID_client)
+        print("Total des "+str(nbr_mois)+" derniers mois: "+str(somme))
+
     symbols = sql.get_symbols()
     if choice == '2':
         print("sur quelle paire?")

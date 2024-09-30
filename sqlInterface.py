@@ -251,7 +251,7 @@ class sqlAcces():
         self.update_bet_with_ID(symbol,ID_UP,ecart_tab[ID_UP][1]-qtt)
         return ID_down
     
-    def ajout_benef_paire_devise(self,symbol,qtt,ID_client):
+    def ajout_epargne_paire_devise(self,symbol,qtt,ID_client):
         epargne = self.get_devises_from_symbol(symbol,ID_client)["epargne"]
         try:
             self.cur.execute("UPDATE Devises SET epargne=? WHERE symbol=?",
@@ -366,6 +366,8 @@ class sqlAcces():
         elif last_filled["sens"] == "BUY":
             benef_sans_add =self.get_calcul_benefice(symbol,last_filled)
             self.ajout_benef_paire_devise(symbol,benef_sans_add,ID_client)
+
+
     def convert_fetch_to_dico(self,ordre):
         ordre_dico = {"ID":ordre[0],
                       "symbol":ordre[1],
@@ -603,7 +605,7 @@ class sqlAcces():
             if last_filled["niveau"] == 1 or last_filled["niveau"] == 2:
                 fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
                 benef=last_filled["montant"]*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
-                self.update_order_benef(last_filled["ID"],str(benef-fee_courant))
+                self.update_order_benef(last_filled["ID"],str(benef-fee_courant),symbol)
             elif last_filled["niveau"] == 3:
                 fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
                 B1=ecart_bet[ID_ecart_filled-1][1]
@@ -615,7 +617,7 @@ class sqlAcces():
                     self.tele.send_message("montant: "+str(last_filled["montant"]))
                 Benef1 = B1*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
                 Benef2 = B2*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled-1][0])
-                self.update_order_benef(last_filled["ID"],str(Benef1+Benef2-fee_courant))
+                self.update_order_benef(last_filled["ID"],str(Benef1+Benef2-fee_courant),symbol)
             elif last_filled["niveau"] == 4:
                 fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
                 B1=ecart_bet[ID_ecart_filled-1][1]
@@ -630,12 +632,15 @@ class sqlAcces():
                 Benef1 = B1*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
                 Benef2 = B2*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled-1][0])
                 Benef3 = B3*(ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled-2][0])
-                self.update_order_benef(last_filled["ID"],str(Benef1+Benef2+Benef3-fee_courant))
+                self.update_order_benef(last_filled["ID"],str(Benef1+Benef2+Benef3-fee_courant),symbol)
+
+
+
 
         elif last_filled["sens"]=="BUY":
             if last_filled["niveau"] == 1 or last_filled["niveau"] == 2:
                 fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
-                self.update_order_benef(last_filled["ID"],str(-fee_courant))
+                self.update_order_benef(last_filled["ID"],str(-fee_courant),symbol)
 
             elif last_filled["niveau"] == 3:
                 fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
@@ -647,7 +652,7 @@ class sqlAcces():
                     self.tele.send_message("B2: "+str(B2))
                     self.tele.send_message("montant: "+str(last_filled["montant"]))
                 Benef2 = B2 * (ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
-                self.update_order_benef(last_filled["ID"],str(Benef2-fee_courant))
+                self.update_order_benef(last_filled["ID"],str(Benef2-fee_courant),symbol)
             
             elif last_filled["niveau"] == 4:
                 fee_courant=last_filled["montant"]*FEE*last_filled["limite"]
@@ -662,7 +667,7 @@ class sqlAcces():
                     self.tele.send_message("montant: "+str(last_filled["montant"]))
                 Benef2 = B2 * (ecart_bet[ID_ecart_filled+1][0]-ecart_bet[ID_ecart_filled][0])
                 Benef3 = B3 * (ecart_bet[ID_ecart_filled+2][0]-ecart_bet[ID_ecart_filled][0])
-                self.update_order_benef(last_filled["ID"],str(Benef2+Benef3-fee_courant))
+                self.update_order_benef(last_filled["ID"],str(Benef2+Benef3-fee_courant),symbol)
     
     def get_calcul_benefice(self,symbol,last_filled):
         FEE=0.00075
@@ -735,8 +740,9 @@ class sqlAcces():
                 return float(Benef2+Benef3-fee_courant)
     
 
-    def update_order_benef(self,ID,benef):
+    def update_order_benef(self,ID,benef,symbol):
         benef_round= str(round(float(benef),8))
+        self.add_to_benef_all_and_benef_TMP(symbol,benef)
         try:
             self.cur.execute("UPDATE Ordres SET benefice=? WHERE ID=?",
                              (benef_round,str(ID)))
@@ -747,6 +753,80 @@ class sqlAcces():
         retour = self.con.commit()
         return retour
     
+    
+    def add_to_benef_all_and_benef_TMP(self,symbol,benef):
+        try:
+            benefs_DB = self.get_benef_TMP_and_benef_all_from_symbol(symbol)
+            new_benef_all = benefs_DB["ALL"] + benef
+            new_benef_tmp = benefs_DB["TMP"] + benef
+            self.cur.execute("UPDATE Devises SET benef_all="+str(new_benef_all)+",benef_TMP="+str(new_benef_tmp)+" WHERE symbol='"+symbol+"'")
+            self.con.commit()
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("add_to_benef_all_and_benef_TMP_SQL",str(inst),symbol)
+            return inst
+        
+
+    def get_benef_TMP_and_benef_all_from_symbol(self,symbol):
+        try:
+            res = self.cur.execute("SELECT benef_TMP, benef_all FROM Devises WHERE symbol='"+str(symbol)+"'")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_benef_TMP_and_benef_all_from_symbol_SQL",str(inst),"GET_SYMBOL")
+            return inst
+        benefices = res.fetchall()[0]
+        benefices_dic = {"ALL":benefices[1],"TMP":benefices[0]}
+        return benefices_dic
+    
+    def add_to_factu_from_symbol(self,symbol,ajout):
+        try:
+            factu = self.get_factu_from_symbol(symbol)
+            new_factu = factu + ajout
+            self.cur.execute("UPDATE Devises SET factu="+str(new_factu)+" WHERE symbol='"+symbol+"'")
+            self.con.commit()
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("add_to_factu_from_symbol_SQL",str(inst),symbol)
+            return inst
+    
+    def get_reinject_repartition(self,symbol):
+        try:
+            res = self.cur.execute("SELECT down, local, up, epargne_percent, factu_percent FROM Devises WHERE symbol='"+str(symbol)+"'")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_reinject_repartition_SQL",str(inst),"GET_SYMBOL")
+            return inst
+        repart = res.fetchall()[0]
+        repart_dic = {"down":repart[0],
+                         "local":repart[1],
+                         "up":repart[2],
+                         "epargne_prct":repart[3],
+                         "factu_prct":repart[4]}
+        return repart_dic
+    
+
+    def get_factu_from_symbol(self,symbol):
+        try:
+            res = self.cur.execute("SELECT factu FROM Devises WHERE symbol='"+str(symbol)+"'")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_factu_from_symbol_SQL",str(inst),"GET_SYMBOL")
+            return inst
+        factu = res.fetchall()[0][0]
+        if factu == None:
+            factu=0
+        return factu
+    
+    def get_dev_entiere(self,symbol):
+        try:
+            res = self.cur.execute("SELECT dev_entiere FROM Devises WHERE symbol='"+str(symbol)+"'")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_factu_from_symbol_SQL",str(inst),"GET_SYMBOL")
+            return inst
+        ent = res.fetchall()[0][0]
+
+        return ent
+
+
     def get_gain_jour(self,symbol,annee,mois,jour):
         date = str(annee)+"-"+"%02.0f"%mois+"-"+"%02.0f"%jour
         print(date)
@@ -907,7 +987,7 @@ class sqlAcces():
                              (str(new_niveau),str(key)))
         except sqlite3.IntegrityError as inst:
             ordre = self.get_order_info_by_ID(key)
-            self.new_log_error("update_order_benef_SQL",str(inst),ordre["symbol"])
+            self.new_log_error("baisser_niveau_ordre_SQL_SQL",str(inst),ordre["symbol"])
             return inst
         retour = self.con.commit()
         return retour
@@ -993,13 +1073,18 @@ class sqlAcces():
             clients_infos[client[0]]["api"]=client[2]
             clients_infos[client[0]]["secret"]=client[3]
             clients_infos[client[0]]["tele"]=client[4]
+            clients_infos[client[0]]["base"]=client[5]
 
         return clients_infos
 
 def main():
     sql = sqlAcces()
-    DEVISE='XRPEUR'
-    sql.get_symbols_actif()
+    DEVISE='EURUSDT_seb'
+    #sql.get_symbols_actif()
+
+    repart = sql.get_dev_entiere(DEVISE)
+    print(repart)
+
 
     #sql.add_ajout_to_ecart(DEVISE)
     #print(sql.get_ajout_flag(DEVISE))

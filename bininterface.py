@@ -34,10 +34,14 @@ class binAcces():
             if sens == self.client.SIDE_SELL and (niveau==1 or niveau == 2) and benef_ratio < ajout_qtt and symbol=="XRPEUR":
                 montant += ajout_qtt
 
+            if self.sql.get_dev_entiere(symbol):
+                montant = int(montant)
+
             montant_call='%.8f' % montant
             if symbol == "PEPEEUR" or symbol == "PEPEEUR_1" or symbol == "PEPEEUR_2" or symbol == "PEPEEUR_3":
                 montant_call='%.0f' % montant
             symbol_plited = symbol.split("_")[0]
+            
             
             response = self.clients[ID_client].create_order(symbol=symbol_plited, 
                                             side=sens, 
@@ -49,7 +53,7 @@ class binAcces():
             self.sql.new_log_error("new_limite_order_Binance",str(inst),symbol)
             return ""
         
-        self.sql.new_order(response["orderId"],symbol,montant,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart,UP,ID_client,niveau)
+        self.sql.new_order(response["orderId"],symbol,montant_call,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart,UP,ID_client,niveau)
         return response["orderId"]
     
 
@@ -233,6 +237,35 @@ class binAcces():
         
         self.sql.new_order(response["orderId"],symbol,montant,"",response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_MARKET,sens,0,0,ID_client)
         return response["orderId"]
+    
+    def get_order_info_with_ID(self,symbol,ID_client,ID_partial,ID_market):
+        symbol_splited = symbol.split("_")[0]
+        orders_Binance = self.clients[ID_client].get_all_orders(symbol=symbol_splited)
+        retour = {}
+        for ob in orders_Binance:
+            if ob["orderId"] == int(ID_partial):
+                retour["PARTIAL"] = ob
+            if ob["orderId"] == int(ID_market):
+                retour["MARKET"] = ob
+
+        return retour
+
+    
+    def calcul_benef_partial(self,symbol,ID_client,ID_partial,ID_market):
+        FEE=0.00075
+        orders_info = self.get_order_info_with_ID(symbol,ID_client,ID_partial,ID_market)
+        order_market = orders_info["MARKET"]
+        order_partial = orders_info["PARTIAL"]
+        benefice_sans_fee = abs(float(order_market["cummulativeQuoteQty"])-float(order_partial["cummulativeQuoteQty"]))
+        print("Benefice (sans fee) : "+str(benefice_sans_fee))
+        current_fee = float(order_market["cummulativeQuoteQty"])*FEE + float(order_partial["cummulativeQuoteQty"])*FEE
+        print("FEE : "+ str(current_fee))
+        benefice = benefice_sans_fee-current_fee
+        print("benefice reel : "+ str(benefice))
+        breakpoint()
+        self.sql.update_order_benef(str(order_partial["orderId"]),str(benefice),symbol)
+
+
         
 
     def cancel_order(self,ID,ID_client):
@@ -245,6 +278,18 @@ class binAcces():
             return ""
         self.sql.update_order(ID,ordre["status"],datetime.now(timezone.utc),ordre["executedQty"])
         retour = [ordre["status"],ordre["executedQty"]]
+        return retour
+
+    def cancel_order_partial(self,ID,ID_client):
+        try:
+            symbol = self.sql.get_order_info_by_ID(ID)["symbol"]
+            symbol_split = symbol.split("_")[0]
+            ordre = self.clients[ID_client].cancel_order(symbol=symbol_split,orderId=int(ID))
+        except Exception as inst:
+            self.sql.new_log_error("cancel_order_Binance",str(inst),symbol)
+            return ""
+        self.sql.update_order(ID,"PARTIAL",datetime.now(timezone.utc),ordre["executedQty"])
+        retour = ["PARTIAL",ordre["executedQty"]]
         return retour
     
     #######################################
@@ -411,6 +456,8 @@ def main():
     #found = bin.get_price("DOGEBTC")
 
     #print(found)
+    bin.calcul_benef_partial("XRPEUR",1,"706028678","706082325")
+    
     
 
 

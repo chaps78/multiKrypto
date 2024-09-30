@@ -68,7 +68,15 @@ class Basics():
                 if len(ordres_new) == 1:
                     last_filled = self.sql.get_last_filled(symbol,ID_client)
                     self.sql.calcul_benefice(symbol,last_filled)
-                    self.sql.add_bet_after_sell(symbol,last_filled,ID_client)
+                    #self.sql.add_bet_after_sell(symbol,last_filled,ID_client)
+                    #############################################################################
+                    #                                                                           #
+                    #               Ajouter ici la nouvelle fonction pour le calcul de benef    #
+                    #                                                                           #
+                    #############################################################################
+                    
+
+
                     clients = self.sql.get_clients_infos()
 
                     self.tele.send_message("FILLED "+symbol+" :"+str(last_filled["sens"])+"\n"+str(last_filled["montant_execute"]),clients[ID_client]["tele"])
@@ -91,6 +99,32 @@ class Basics():
         except Exception as inst:
             self.sql.new_log_debug("Ordres V2",str(inst),symbol)
             return inst
+        
+    def reinject_benef(self,symbol,ID_client,last_filled):
+        benef_tmp = self.sql.get_benef_TMP_and_benef_all_from_symbol(symbol)["TMP"]
+        if benef_tmp>0:
+            repart = self.sql.get_reinject_repartition(symbol)
+            factu = benef_tmp*repart["factu_prct"]
+            epargne = benef_tmp*repart["epargne_prct"]
+            down = benef_tmp*repart["down"]
+            local = benef_tmp*repart["local"]
+            up = benef_tmp*repart["up"]
+            ######### ATENTION LOCAL est en EUR et pas en XRP !!!!!!!!!!!!!!!!!!!!!!! a changer
+            self.reinject_local(symbol,last_filled,local)
+            self.sql.ajout_epargne_paire_devise(symbol,epargne,ID_client)
+            #####################################################################################
+            #                                                                                   #
+            #                       Continuer a coder ici                                       #
+            #                                                                                   #
+            #####################################################################################
+
+            self.sql.add_to_factu_from_symbol(symbol,factu)
+
+    def reinject_local(self,symbol,last_filled,qtt):
+        if last_filled["sens"] == "SELL":
+            current_bet = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,float(last_filled["ID_ecart"])-1)[3]
+            self.sql.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+qtt)
+            self.sql.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,qtt)
 
     def un_ordre_filled_autre_new(self,ordres_ouvert,symbol,ID_client):
         for ordre_ouvert in ordres_ouvert:
@@ -103,18 +137,21 @@ class Basics():
 
     def un_ordre_filled_autre_partial(self,ordres_partiel,symbol,ID_client):
         for ordre in ordres_partiel:
-            self.bin.cancel_order(ordre["ID"],ID_client)
+            self.bin.cancel_order_partial(ordre["ID"],ID_client)
             sens = ordre["sens"]
             if sens == self.bin.client.SIDE_BUY:
-                self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_SELL,ID_client)
+                ID_market = self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_SELL,ID_client)
             if sens == self.bin.client.SIDE_SELL:
-                self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_BUY,ID_client)
+                ID_market = self.bin.new_market_order(symbol,ordre["montant_execute"],self.bin.client.SIDE_BUY,ID_client)
         last_filled_order = self.sql.get_last_filled(symbol,ID_client)
+        self.bin.calcul_benef_partial(symbol,ID_client,ordre["ID"],ID_market)
         self.sql.new_log_debug("Nouveaux ordres apres filled",str(last_filled_order),symbol)
 
         self.bin.new_achat(symbol,last_filled_order["ID_ecart"],ID_client)
         self.bin.new_vente(symbol,last_filled_order["ID_ecart"],ID_client)
         #self.kpi.reste_sur_limites(symbol,ID_client)
+        
+    
 
     def deux_ordres_filled(self,symbol,ID_client):
         last_filled_order_buy = self.sql.get_last_filled_buy(symbol)
