@@ -262,7 +262,6 @@ class binAcces():
         print("FEE : "+ str(current_fee))
         benefice = benefice_sans_fee-current_fee
         print("benefice reel : "+ str(benefice))
-        breakpoint()
         self.sql.update_order_benef(str(order_partial["orderId"]),str(benefice),symbol)
 
 

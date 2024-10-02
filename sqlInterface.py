@@ -143,7 +143,11 @@ class sqlAcces():
         for ecart_SQL in ecarts_SQL:
             ecart_dico[int(ecart_SQL[0])]=[ecart_SQL[2],ecart_SQL[3]]
         return ecart_dico
-
+    
+    #####################################################
+    #[2] donne la limite
+    #[3] donne le montant du bet
+    #####################################################
     def get_ecart_bet_from_symbol_and_ID(self,symbol,ID):
         try:
             res = self.cur.execute("SELECT * FROM ecart_bet WHERE ID='"+str(ID)+"' AND symbol='"+str(symbol)+"'")
@@ -287,10 +291,7 @@ class sqlAcces():
         return retour
     
     def calcul_benef(self,symbol,last_filled):
-        FEE = 0.00075
-        ecart_dessous = self.get_ecart_bet_from_symbol_and_ID(symbol,last_filled["ID_ecart"]-1)
-        delta=float(last_filled["limite"])-float(ecart_dessous[2])
-        benef = delta*last_filled["montant"]-2*FEE*last_filled["montant"]*last_filled["limite"]
+        benef = self.calcul_benef_with_ID(symbol,last_filled["ID_ecart"])
         return benef
     
     def calcul_benef_unique_fee(self,symbol,last_filled):
@@ -300,12 +301,16 @@ class sqlAcces():
         benef = delta*last_filled["montant"]-FEE*last_filled["montant"]*last_filled["limite"]
         return benef
     
-    def calcul_benef_with_ID(self,symbol,ID,limite,montant):
+    def calcul_benef_with_ID(self,symbol,ID,limite=0,montant=0):
         FEE = 0.00075
-        ecart_dessous = self.get_ecart_bet_from_symbol_and_ID(symbol,ID-1)
-        delta=float(limite)-float(ecart_dessous[2])
-        benef = delta*float(montant)-2*FEE*float(montant)*float(limite)
+        limite = self.get_ecart_bet_from_symbol_and_ID(symbol,ID)
+        ecart_dessus = self.get_ecart_bet_from_symbol_and_ID(symbol,ID+1)
+        delta=float(ecart_dessus[2])-float(limite[2])
+        benef = delta*float(limite[3])-FEE*(float(limite[3])*float(limite[2])+float(limite[3])*float(ecart_dessus[2]))
         return benef
+    
+    #def get_ID_down(self,symbol,ID):
+        
 
     def add_bet_after_sell(self,symbol,last_filled,ID_client):
         if last_filled["sens"] == "SELL":
@@ -439,17 +444,36 @@ class sqlAcces():
             return inst
         try:
             devises = res.fetchall()[0]
-            formated_devises = [devises[1],devises[2]]
             formated_devises = {"devise1":devises[1],
                                 "devise2":devises[2],
                                 "down":devises[3],
                                 "local":devises[4],
                                 "up":devises[5],
-                                "epargne":devises[6]
+                                "epargne":devises[6],
+                                "actif":devises[7],
+                                "client":devises[8],
+                                "benef_all":devises[9],
+                                "benef_tmp":devises[10],
+                                "factu_percent":devises[11],
+                                "factu":devises[12],
+                                "UP_tmp":devises[13],
+                                "epargne_prcent":devises[14],
+                                "dev_entiere":devises[15],
+                                "obj_gain":devises[16]
                                 }
         except:
             return ""
         return(formated_devises)
+    
+    def get_max_ID_from_symbol(self,symbol):
+        try:
+            res = self.cur.execute("SELECT MAX(ID) FROM ecart_bet WHERE symbol='"+str(symbol)+"'")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_max_ID_from_symbol_SQL",str(inst),symbol)
+            return inst
+        max = res.fetchall()[0]
+        return max[0]
 
     def set_KPI_restes(self,symbol,restes,last_ID,EUR,XRP,XRP_Prix,DOGE,DOGE_Prix,BTC,BTC_Prix,Total,ETH,ETH_Prix,PEPE,PEPE_Prix):
         try:
@@ -1076,14 +1100,44 @@ class sqlAcces():
             clients_infos[client[0]]["base"]=client[5]
 
         return clients_infos
+    
+    def set_up_tmp(self,symbol,qtt):
+        try:
+            self.cur.execute("UPDATE Devises SET up_TMP="
+                                 +str(qtt)
+                                 +" WHERE symbol='"
+                                 +symbol
+                                 +"'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("set_up_tmp_SQL",str(inst),symbol)
+            return inst
+        self.con.commit()
+    
+    def get_up_tmp(self,symbol):
+        try:
+            res = self.cur.execute("SELECT up_TMP FROM Devises WHERE symbol='"+symbol+"'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_up_tmp_SQL",str(inst),"NA")
+            return inst
+        self.con.commit()
+        up_TMP = res.fetchall()[0][0]
+        return up_TMP
+    
+    def add_2_up_tmp(self,symbol,qtt):
+        try:
+            current_value = float(self.get_up_tmp(symbol))
+        except:
+            current_value = 0.0
+        self.set_up_tmp(symbol,current_value+float(qtt))
+
 
 def main():
     sql = sqlAcces()
     DEVISE='EURUSDT_seb'
     #sql.get_symbols_actif()
 
-    repart = sql.get_dev_entiere(DEVISE)
-    print(repart)
+    #repart = sql.get_dev_entiere(DEVISE)
+    #print(repart)
 
 
     #sql.add_ajout_to_ecart(DEVISE)
@@ -1144,5 +1198,11 @@ def main():
     #sql.set_ajout("PEPEEUR_3_Ajout.csv")
     #toto = sql.get_ecart_bet_from_symbol("XRPEUR")
     #sql.ajout_up_bet("XRPEUR",15,4)
+    #sql.calcul_benef_with_ID("XRPEUR",164)
+    #print(sql.get_ecart_bet_from_symbol_and_ID("XRPEUR",50)[2])
+    print(sql.get_max_ID_from_symbol("XRPEUR"))
+    #print(sql.get_up_tmp("PEPEEUR"))
+    #sql.add_2_up_tmp("PEPEEUR",0.1)
+    #print(sql.get_up_tmp("PEPEEUR"))
 if __name__ == '__main__':
      main()

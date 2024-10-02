@@ -109,22 +109,69 @@ class Basics():
             down = benef_tmp*repart["down"]
             local = benef_tmp*repart["local"]
             up = benef_tmp*repart["up"]
-            ######### ATENTION LOCAL est en EUR et pas en XRP !!!!!!!!!!!!!!!!!!!!!!! a changer
             self.reinject_local(symbol,last_filled,local)
+            self.reinject_down(symbol,ID_client,down,last_filled)
             self.sql.ajout_epargne_paire_devise(symbol,epargne,ID_client)
-            #####################################################################################
-            #                                                                                   #
-            #                       Continuer a coder ici                                       #
-            #                                                                                   #
-            #####################################################################################
-
+            self.reinject_up(symbol,ID_client,up,last_filled)
             self.sql.add_to_factu_from_symbol(symbol,factu)
+            self.sql.add_to_benef_all_and_benef_TMP(symbol,-benef_tmp)
+
+    def reinject_down(self,symbol,ID_client,down,last_filled):
+        ID = int(last_filled["ID_ecart"])-1
+        obj = float(self.sql.get_devises_from_symbol(symbol,ID_client)["obj_gain"])
+        while ID >= 0:
+            if self.sql.calcul_benef_with_ID(symbol,ID)<obj:
+                break
+            ID-=1
+        prix = float(self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID)[2])
+        self.sql.add_to_ecart(symbol,ID,down/prix)
+        return ID
+    
+    def reinject_up(self,symbol,ID_client,qtt,last_filled):
+        print("OUIII0")
+        self.sql.add_2_up_tmp(symbol,qtt)
+        total = float(self.sql.get_up_tmp(symbol))
+        devise_base = self.sql.get_devises_from_symbol(symbol,ID_client)["devise2"]
+        if devise_base == "USDT":
+            convert_to_usdt = total
+        else:
+            taux_convert_to_USDT = float(self.bin.get_price(devise_base+"USDT",ID_client)["price"])
+            convert_to_usdt = total*taux_convert_to_USDT
+
+        if float(convert_to_usdt)>6:
+            print("On lance le traitement")
+            symbol_split = symbol.split("_")[0]
+            taux_convert = float(self.bin.get_price(symbol_split,ID_client)["price"])
+            ID = int(last_filled["ID_ecart"])+1
+            max_ID = self.sql.get_max_ID_from_symbol(symbol)
+            obj = float(self.sql.get_devises_from_symbol(symbol,ID_client)["obj_gain"])
+            while ID <= max_ID:
+                if self.sql.calcul_benef_with_ID(symbol,ID)<obj:
+                    break
+                ID+=1
+
+            dev_entier = self.sql.get_devises_from_symbol(symbol,ID_client)["dev_entiere"]
+            if int(dev_entier) == 1:
+                self.bin.new_market_order(symbol,int(total/taux_convert),"BUY",ID_client)
+                self.sql.add_to_ecart(symbol,ID,int(total/taux_convert))
+                self.sql.add_2_up_tmp(symbol,-int(total/taux_convert)*taux_convert)
+            else:
+                self.bin.new_market_order(symbol,total/taux_convert,"BUY",ID_client)
+                self.sql.add_to_ecart(symbol,ID,total/taux_convert)
+                self.sql.add_2_up_tmp(symbol,-total)
+
+    ####################################################################
+    #
+    #                Continuer ici
+    #
+    ####################################################################
+        
+
 
     def reinject_local(self,symbol,last_filled,qtt):
-        if last_filled["sens"] == "SELL":
-            current_bet = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,float(last_filled["ID_ecart"])-1)[3]
-            self.sql.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+qtt)
-            self.sql.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,qtt)
+        current_bet = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,float(last_filled["ID_ecart"])-1)[3]
+        self.sql.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+qtt/last_filled["limite"])
+        self.sql.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,qtt/last_filled["limite"])
 
     def un_ordre_filled_autre_new(self,ordres_ouvert,symbol,ID_client):
         for ordre_ouvert in ordres_ouvert:
@@ -195,6 +242,7 @@ class Basics():
 #                                 MAIN                                    #
 ###########################################################################
 def main():
+    print("OUIII2")
     basic = Basics()
     DEVISES=basic.sql.get_symbols_actif()
 
@@ -206,14 +254,19 @@ def main():
     #basic.initialise("EURUSDT_seb",3)
     #basic.initialise("PEPEEUR_3")
     #    time.sleep(3)
-    while True:
-        users_IDs=DEVISES.keys()
-        for user_ID in users_IDs:
-            for DEVISE in DEVISES[user_ID]:
-                basic.verification_2_ordres_V2(DEVISE,user_ID)
-
-                basic.verification_niveau_VS_timer(DEVISE,user_ID)
-                time.sleep(4)
+    #while True:
+    #    users_IDs=DEVISES.keys()
+    #    for user_ID in users_IDs:
+    #        for DEVISE in DEVISES[user_ID]:
+    #            basic.verification_2_ordres_V2(DEVISE,user_ID)
+    #
+    #            basic.verification_niveau_VS_timer(DEVISE,user_ID)
+    #            time.sleep(4)
+    last_field = basic.sql.get_last_filled("XRPEUR",1)
+    #print(last_field)
+    #print("OUIII")
+    #basic.reinject_down("XRPEUR",1,0.5,last_field)
+    basic.reinject_up("XRPUSDT_nico",2,0.2,last_field)
 
 
 
