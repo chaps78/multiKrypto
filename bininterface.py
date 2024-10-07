@@ -37,10 +37,17 @@ class binAcces():
             if self.sql.get_dev_entiere(symbol):
                 montant = int(montant)
 
-            montant_call='%.8f' % montant
-            if symbol == "PEPEEUR" or symbol == "PEPEEUR_1" or symbol == "PEPEEUR_2" or symbol == "PEPEEUR_3":
-                montant_call='%.0f' % montant
             symbol_plited = symbol.split("_")[0]
+            montant_call='%.8f' % montant
+            if symbol_plited == "PEPEEUR":
+                montant_call='%.0f' % montant
+            elif symbol_plited == "BTCUSDT" or symbol_plited == "BTCEUR":
+                montant_call='%.5f' % montant
+                montant_tmp = int(montant * 10 ** 5)/10 ** 5
+                montant_call='%.5f' % montant_tmp
+            elif symbol_plited == "ETHUSDT" or symbol_plited == "ETHEUR":
+                montant_tmp = int(montant * 10 ** 4)/10 ** 4
+                montant_call='%.4f' % montant_tmp
             
             
             response = self.clients[ID_client].create_order(symbol=symbol_plited, 
@@ -54,6 +61,39 @@ class binAcces():
             return ""
         
         self.sql.new_order(response["orderId"],symbol,montant_call,limite,response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,ID_ecart,UP,ID_client,niveau)
+        return response["orderId"]
+    
+
+    def new_manual_limite_order(self,symbol,montant,limite,sens,flag_ajout,ID_client,niveau=1):
+        try:
+
+            if self.sql.get_dev_entiere(symbol):
+                montant = int(montant)
+
+            montant_call='%.8f' % float(montant)
+            symbol_plited = symbol.split("_")[0]
+            if symbol_plited == "PEPEEUR":
+                montant_call='%.0f' % montant
+            elif symbol_plited == "BTCUSDT" or symbol_plited == "BTCEUR":
+                montant_call='%.5f' % montant
+                montant_tmp = int(montant * 10 ** 5)/10 ** 5
+                montant_call='%.5f' % montant_tmp
+            elif symbol_plited == "ETHUSDT" or symbol_plited == "ETHEUR":
+                montant_tmp = int(montant * 10 ** 4)/10 ** 4
+                montant_call='%.4f' % montant_tmp
+            
+            
+            response = self.clients[ID_client].create_order(symbol=symbol_plited, 
+                                            side=sens, 
+                                            type=Client.ORDER_TYPE_LIMIT, 
+                                            quantity=montant_call, 
+                                            price=limite,
+                                            timeInForce='GTC')
+        except Exception as inst:
+            self.sql.new_log_error("new_limite_order_Binance",str(inst),symbol)
+            return ""
+        
+        self.sql.new_order(response["orderId"],symbol,montant_call,limite,"MANUAL_LIMIT",datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_LIMIT,sens,None,0,ID_client,niveau)
         return response["orderId"]
     
 
@@ -269,7 +309,12 @@ class binAcces():
 
     def cancel_order(self,ID,ID_client):
         try:
-            symbol = self.sql.get_order_info_by_ID(ID)["symbol"]
+            try:
+                symbol = self.sql.get_order_info_by_ID(ID)["symbol"]
+                
+            except:
+                print("L'ordre n'existe pas en base")
+                symbol = input("Rappel symbol SVP : ")
             symbol_split = symbol.split("_")[0]
             ordre = self.clients[ID_client].cancel_order(symbol=symbol_split,orderId=int(ID))
         except Exception as inst:

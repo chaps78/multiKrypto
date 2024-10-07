@@ -113,6 +113,8 @@ class sqlAcces():
                 tab_ligne = ligne.split(",")
                 self.cur.execute("INSERT INTO ecart_bet VALUES(?,?,?,?,?)",
                                  (tab_ligne[0],tab_ligne[1],float(tab_ligne[2]),tab_ligne[3],0))
+                self.cur.execute("INSERT INTO ajout VALUES(?,?,?,?)",
+                                 (tab_ligne[0],tab_ligne[1],float(0),datetime.now(timezone.utc)))
         except Exception as inst:
             self.new_log_error("set_ecart_bet_SQL",str(inst),"NA")
         self.con.commit()
@@ -159,7 +161,6 @@ class sqlAcces():
         #Idealement renvoyer un dictionnaire au lieu du tableau
         ###############
         ret = res.fetchall()
-        #breakpoint()
         return ret[0]
 
     def get_last_filled(self,symbol,ID_client):
@@ -781,12 +782,23 @@ class sqlAcces():
     def add_to_benef_all_and_benef_TMP(self,symbol,benef):
         try:
             benefs_DB = self.get_benef_TMP_and_benef_all_from_symbol(symbol)
-            new_benef_all = benefs_DB["ALL"] + benef
-            new_benef_tmp = benefs_DB["TMP"] + benef
+            new_benef_all = benefs_DB["ALL"] + float(benef)
+            new_benef_tmp = benefs_DB["TMP"] + float(benef)
             self.cur.execute("UPDATE Devises SET benef_all="+str(new_benef_all)+",benef_TMP="+str(new_benef_tmp)+" WHERE symbol='"+symbol+"'")
             self.con.commit()
         except sqlite3.IntegrityError as inst:
             self.new_log_error("add_to_benef_all_and_benef_TMP_SQL",str(inst),symbol)
+            return inst    
+    
+    def add_to_benef_TMP(self,symbol,benef):
+        try:
+            benefs_DB = self.get_benef_TMP_and_benef_all_from_symbol(symbol)
+            new_benef_all = benefs_DB["ALL"] + float(benef)
+            new_benef_tmp = benefs_DB["TMP"] + float(benef)
+            self.cur.execute("UPDATE Devises SET benef_TMP="+str(new_benef_tmp)+" WHERE symbol='"+symbol+"'")
+            self.con.commit()
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("add_to_benef_TMP_SQL",str(inst),symbol)
             return inst
         
 
@@ -846,8 +858,8 @@ class sqlAcces():
         except sqlite3.IntegrityError as inst:
             self.new_log_error("get_factu_from_symbol_SQL",str(inst),"GET_SYMBOL")
             return inst
-        ent = res.fetchall()[0][0]
-
+        tmp = res.fetchall()
+        ent = tmp[0][0]
         return ent
 
 
@@ -1019,7 +1031,6 @@ class sqlAcces():
     def add_to_ecart(self,symbol,ID_ecart,valeur_to_add):
         try:
             curent_value = self.get_ecart_bet_from_symbol_and_ID(symbol,ID_ecart)[3]
-            #breakpoint()
             valeur_to_update = curent_value + valeur_to_add
             self.cur.execute("UPDATE ecart_bet SET bet="+str(valeur_to_update)+" WHERE ID="+str(ID_ecart)+" AND symbol='"+symbol+"'")
         except sqlite3.IntegrityError as inst:
@@ -1034,7 +1045,6 @@ class sqlAcces():
         ec_b = self.get_ecart_bet_from_symbol(symbol)
         for ID in range(len(ec_b)-ID_courant-1):
             benef = self.get_calcul_benef_with_ID(symbol,ID+ID_courant+1)
-            #breakpoint()
             if 0.9*benef/ec_b[ID+ID_courant+1][0] < (local + UP):
                 return ID+ID_courant+1
             
@@ -1192,7 +1202,7 @@ def main():
     ecart_bet = sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
     breakpoint()"""
     #sql.arrangement_DB("XRPEUR")
-    #sql.set_ecart_bet("EURUSDT_seb.csv")
+    #sql.set_ecart_bet("Etude-ETHUSDT_Carlos.csv")
     #sql.set_ajout("EURUSDT_seb_ajout.csv")
     #sql.set_ecart_bet("PEPEEUR_3.csv")
     #sql.set_ajout("PEPEEUR_3_Ajout.csv")
@@ -1200,7 +1210,7 @@ def main():
     #sql.ajout_up_bet("XRPEUR",15,4)
     #sql.calcul_benef_with_ID("XRPEUR",164)
     #print(sql.get_ecart_bet_from_symbol_and_ID("XRPEUR",50)[2])
-    print(sql.get_max_ID_from_symbol("XRPEUR"))
+    #print(sql.get_max_ID_from_symbol("XRPEUR"))
     #print(sql.get_up_tmp("PEPEEUR"))
     #sql.add_2_up_tmp("PEPEEUR",0.1)
     #print(sql.get_up_tmp("PEPEEUR"))

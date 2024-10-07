@@ -64,17 +64,26 @@ class Basics():
             ordres_partial = self.sql.get_orders_status_symbol_filter(self.bin.client.ORDER_STATUS_PARTIALLY_FILLED,symbol,ID_client)
             ordres_DB = ordres_partial + ordres_new
 
+            #if symbol=="ETHUSDT_Carlos":
+            #    breakpoint()
+
             if len(ordres_DB) ==1 :
                 if len(ordres_new) == 1:
                     last_filled = self.sql.get_last_filled(symbol,ID_client)
-                    self.sql.calcul_benefice(symbol,last_filled)
+                    try:
+                        self.sql.calcul_benefice(symbol,last_filled)
+                    except Exception as inst:
+                        self.sql.new_log_debug("Ordres V2",str(inst),symbol)
+                        print("problème dans calcul benefice")
+                        print(str(inst))
+                        breakpoint()
                     #self.sql.add_bet_after_sell(symbol,last_filled,ID_client)
                     #############################################################################
                     #                                                                           #
                     #               Ajouter ici la nouvelle fonction pour le calcul de benef    #
                     #                                                                           #
                     #############################################################################
-                    
+                    self.reinject_benef(symbol,ID_client,last_filled)
 
 
                     clients = self.sql.get_clients_infos()
@@ -104,17 +113,17 @@ class Basics():
         benef_tmp = self.sql.get_benef_TMP_and_benef_all_from_symbol(symbol)["TMP"]
         if benef_tmp>0:
             repart = self.sql.get_reinject_repartition(symbol)
-            factu = benef_tmp*repart["factu_prct"]
-            epargne = benef_tmp*repart["epargne_prct"]
-            down = benef_tmp*repart["down"]
-            local = benef_tmp*repart["local"]
-            up = benef_tmp*repart["up"]
+            factu = benef_tmp*repart["factu_prct"]/100
+            epargne = benef_tmp*repart["epargne_prct"]/100
+            down = benef_tmp*repart["down"]/100
+            local = benef_tmp*repart["local"]/100
+            up = benef_tmp*repart["up"]/100
             self.reinject_local(symbol,last_filled,local)
             self.reinject_down(symbol,ID_client,down,last_filled)
             self.sql.ajout_epargne_paire_devise(symbol,epargne,ID_client)
             self.reinject_up(symbol,ID_client,up,last_filled)
             self.sql.add_to_factu_from_symbol(symbol,factu)
-            self.sql.add_to_benef_all_and_benef_TMP(symbol,-benef_tmp)
+            self.sql.add_to_benef_TMP(symbol,-benef_tmp)
 
     def reinject_down(self,symbol,ID_client,down,last_filled):
         ID = int(last_filled["ID_ecart"])-1
@@ -159,12 +168,6 @@ class Basics():
                 self.bin.new_market_order(symbol,total/taux_convert,"BUY",ID_client)
                 self.sql.add_to_ecart(symbol,ID,total/taux_convert)
                 self.sql.add_2_up_tmp(symbol,-total)
-
-    ####################################################################
-    #
-    #                Continuer ici
-    #
-    ####################################################################
         
 
 
@@ -242,7 +245,6 @@ class Basics():
 #                                 MAIN                                    #
 ###########################################################################
 def main():
-    print("OUIII2")
     basic = Basics()
     DEVISES=basic.sql.get_symbols_actif()
 
@@ -251,22 +253,23 @@ def main():
     ################################################
     basic.tele.send_message("Bonjour")
     #for DEVISE in DEVISES:
-    #basic.initialise("EURUSDT_seb",3)
+    #basic.initialise("BTCUSDT_Carlos",5)
+    #basic.initialise("ETHUSDT_Carlos",5)
     #basic.initialise("PEPEEUR_3")
     #    time.sleep(3)
-    #while True:
-    #    users_IDs=DEVISES.keys()
-    #    for user_ID in users_IDs:
-    #        for DEVISE in DEVISES[user_ID]:
-    #            basic.verification_2_ordres_V2(DEVISE,user_ID)
-    #
-    #            basic.verification_niveau_VS_timer(DEVISE,user_ID)
-    #            time.sleep(4)
-    last_field = basic.sql.get_last_filled("XRPEUR",1)
+    while True:
+        users_IDs=DEVISES.keys()
+        for user_ID in users_IDs:
+            for DEVISE in DEVISES[user_ID]:
+                basic.verification_2_ordres_V2(DEVISE,user_ID)
+    
+                basic.verification_niveau_VS_timer(DEVISE,user_ID)
+                time.sleep(4)
+    #last_field = basic.sql.get_last_filled("XRPEUR",1)
     #print(last_field)
     #print("OUIII")
     #basic.reinject_down("XRPEUR",1,0.5,last_field)
-    basic.reinject_up("XRPUSDT_nico",2,0.2,last_field)
+    #basic.reinject_up("XRPUSDT_nico",2,0.2,last_field)
 
 
 
