@@ -88,7 +88,7 @@ class Basics():
 
                     clients = self.sql.get_clients_infos()
 
-                    self.tele.send_message("FILLED "+symbol+" :"+str(last_filled["sens"])+"\n"+str(last_filled["montant_execute"]),clients[ID_client]["tele"])
+                    self.tele.send_message(str(last_filled["sens"])+" : "+symbol+"\n"+str(last_filled["montant_execute"])+"\nLimite : "+ str(last_filled["limite"]),clients[ID_client]["tele"])
                     self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un NEW : "+str(ordres_DB),symbol)
                     self.un_ordre_filled_autre_new(ordres_DB,symbol,ID_client)
                     self.sheet.update_all_info(symbol)
@@ -112,18 +112,37 @@ class Basics():
     def reinject_benef(self,symbol,ID_client,last_filled):
         benef_tmp = self.sql.get_benef_TMP_and_benef_all_from_symbol(symbol)["TMP"]
         if benef_tmp>0:
-            repart = self.sql.get_reinject_repartition(symbol)
-            factu = benef_tmp*repart["factu_prct"]/100
-            epargne = benef_tmp*repart["epargne_prct"]/100
-            down = benef_tmp*repart["down"]/100
-            local = benef_tmp*repart["local"]/100
-            up = benef_tmp*repart["up"]/100
-            self.reinject_local(symbol,last_filled,local)
-            self.reinject_down(symbol,ID_client,down,last_filled)
-            self.sql.ajout_epargne_paire_devise(symbol,epargne,ID_client)
-            self.reinject_up(symbol,ID_client,up,last_filled)
-            self.sql.add_to_factu_from_symbol(symbol,factu)
-            self.sql.add_to_benef_TMP(symbol,-benef_tmp)
+            try:
+                debug_flag = 0
+                repart = self.sql.get_reinject_repartition(symbol)
+                debug_flag = 1
+                factu = benef_tmp*repart["factu_prct"]/100
+                debug_flag = 2
+                epargne = benef_tmp*repart["epargne_prct"]/100
+                debug_flag = 3
+                down = benef_tmp*repart["down"]/100
+                debug_flag = 4
+                local = benef_tmp*repart["local"]/100
+                debug_flag = 5
+                up = benef_tmp*repart["up"]/100
+                debug_flag = 6
+                self.reinject_local(symbol,last_filled,local)
+                debug_flag = 7
+                self.reinject_down(symbol,ID_client,down,last_filled)
+                debug_flag = 8
+                self.sql.ajout_epargne_paire_devise(symbol,epargne,ID_client)
+                debug_flag = 9
+                self.reinject_up(symbol,ID_client,up,last_filled)
+                debug_flag = 10
+                self.sql.add_to_factu_from_symbol(symbol,factu)
+                debug_flag = 11
+                self.sql.add_to_benef_TMP(symbol,-benef_tmp)
+                debug_flag = 12
+            except Exception as inst:
+                self.sql.new_log_debug("Ordres V2"+ " Flag = "+str(debug_flag),str(inst) ,symbol)
+                self.tele.send_message("Erreur dans les fonctions Flag = "+ str(debug_flag))
+                return inst
+            
 
     def reinject_down(self,symbol,ID_client,down,last_filled):
         ID = int(last_filled["ID_ecart"])-1
@@ -134,10 +153,10 @@ class Basics():
             ID-=1
         prix = float(self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID)[2])
         self.sql.add_to_ecart(symbol,ID,down/prix)
+        self.tele.send_message("Reinject down " +str(down/prix)+"\n ID "+str(ID))
         return ID
     
     def reinject_up(self,symbol,ID_client,qtt,last_filled):
-        print("OUIII0")
         self.sql.add_2_up_tmp(symbol,qtt)
         total = float(self.sql.get_up_tmp(symbol))
         devise_base = self.sql.get_devises_from_symbol(symbol,ID_client)["devise2"]
@@ -148,7 +167,6 @@ class Basics():
             convert_to_usdt = total*taux_convert_to_USDT
 
         if float(convert_to_usdt)>6:
-            print("On lance le traitement")
             symbol_split = symbol.split("_")[0]
             taux_convert = float(self.bin.get_price(symbol_split,ID_client)["price"])
             ID = int(last_filled["ID_ecart"])+1
@@ -160,6 +178,7 @@ class Basics():
                 ID+=1
 
             dev_entier = self.sql.get_devises_from_symbol(symbol,ID_client)["dev_entiere"]
+            self.tele.send_message("Reinject UP " +str(total)+"\n ID "+str(ID_client))
             if int(dev_entier) == 1:
                 self.bin.new_market_order(symbol,int(total/taux_convert),"BUY",ID_client)
                 self.sql.add_to_ecart(symbol,ID,int(total/taux_convert))
@@ -251,9 +270,11 @@ def main():
     ################################################
     #    Initialisation
     ################################################
-    basic.tele.send_message("Bonjour")
+    basic.tele.send_message("Bonjour 1")
     #for DEVISE in DEVISES:
-    #basic.initialise("BTCUSDT_Carlos",5)
+    basic.initialise("PEPEEUR_1",1)
+    basic.initialise("PEPEEUR_2",1)
+    basic.initialise("PEPEEUR_3",1)
     #basic.initialise("ETHUSDT_Carlos",5)
     #basic.initialise("PEPEEUR_3")
     #    time.sleep(3)

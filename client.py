@@ -35,16 +35,44 @@ class Clients():
     def list_orders(self,ID_client,symbol):
         symbol_splited = symbol.split("_")[0]
         orders = self.bin.clients[ID_client].get_all_orders(symbol=symbol_splited)
-        print("##################################")
+        print("#########################################################################################")
         for order in orders:
             if order['status'] == "NEW" or order['status'] == "PARTIAL":
-                print("ID : " + str(order["orderId"]) + "\tSide : " + order["side"] + "\tLimite : " 
+                print("# ID : " + str(order["orderId"]) + "\tSide : " + order["side"] + "\tLimite : " 
                       + str(order['price']) + "\tAmount : " + str(order['origQty']))
                 
     def cancel_order(self,ID_client,symbol):
         self.list_orders(ID_client,symbol)
         ID = input("Select the ID of order you whant to cancel : ")
         self.bin.cancel_order(ID,ID_client)
+        
+    def dashboard_client(self,ID_client):
+        wallet = self.bin.get_wallet(ID_client)
+        devises = self.sql.get_symbols_actif_client(ID_client)
+        print("\n#########################################################################################")
+        print("#\t\t\t\t\tWallet\t\t\t\t\t\t#")
+        print("#########################################################################################")
+        sum_usdt = 0.0
+        for crypto in wallet:
+            total = float(crypto["free"])+float(crypto["locked"])
+            print("# "+crypto["asset"]+ "\t: Free : "+ crypto["free"]+"\tlock : "+crypto["locked"]+ "\tTotal : "+str(total))
+            if crypto["asset"] != "USDT":
+                taux = self.bin.get_price(crypto["asset"]+"USDT",ID_client)
+                US_price = total*float(taux["price"])
+                sum_usdt += US_price
+                print("#\t USDT : "+str(US_price))
+            else:
+                sum_usdt += total
+        us_eur_taux = self.bin.get_price("EURUSDT",ID_client)
+        sum_eur = sum_usdt/float(us_eur_taux["price"])
+        print("\n#########################################################################################")
+        print("#\t\t total USDT : "+str(sum_usdt)+"\t\t\t\t\t\t#")
+        print("#\t\t total EUR : "+str(sum_eur)+"\t\t\t\t\t\t#")
+        for devise in devises:
+            print("#########################################################################################")
+            print("#\t\t\t\t\t"+ devise+ "\t\t\t\t\t#")
+            self.list_orders(ID_client,devise)
+        print("#########################################################################################")
 
 
 def main():
@@ -57,7 +85,7 @@ def main():
     print("\n\t#######################\n")
 
     print("What action do you whant to do?")
-    print("1 - Display Wallet\n2 - Market order\n3 - Open orders list\n4 - New limit order\n5 - Cancel order")
+    print("1 - Display Wallet\n2 - Market order\n3 - Open orders list\n4 - New limit order\n5 - Cancel order\n6 - Dashboard")
     action_selected = input("Enter your choice : ")
     if action_selected == "1":
         Client.display_wallet(client)
@@ -72,6 +100,9 @@ def main():
     elif action_selected == "5":
         symbol = input("Whith symbol : ")
         Client.cancel_order(client,symbol)
+    elif action_selected == "6":
+        
+        Client.dashboard_client(client)
 
 
 

@@ -420,6 +420,20 @@ class sqlAcces():
             devises_ret.append(devise_SQL[0])
         return devises_ret
     
+    def get_symbols_actif_client(self,ID_client):
+        try:
+            res = self.cur.execute("SELECT * FROM Devises WHERE actif=1 AND client='"+str(ID_client)+"'")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_symbols_SQL",str(inst),"GET_SYMBOL")
+            return inst
+        devises_SQL = res.fetchall()
+
+        devises_ret=[]
+        for devise_SQL in devises_SQL:
+            devises_ret.append(devise_SQL[0])
+        return devises_ret
+    
     def get_symbols_actif(self):
         try:
             res = self.cur.execute("SELECT * FROM Devises WHERE actif=1")
@@ -1056,30 +1070,49 @@ class sqlAcces():
         return benef
 
     def arrangement_DB(self,symbol):
-        tab = {93:47,
-               94:2,
-               95:41,
-               96:21,
-               97:42,
-               98:28,
-               99:28,
-               100:28,
-               101:42,
-               102:21,
-               103:42,
-               104:21,
-               105:6,
-               106:14,
-               107:14,
-               115:1,
-               116:14,
-               117:21,
-               118:1,
-               119:7,
-               120:8,
-               121:20,
-               122:10,
-               124:16}
+        tab = {88:8,
+               89:19,
+               90:15,
+               91:41,
+               92:36,
+               93:29,
+               94:39,
+               95:37,
+               96:31,
+               97:24,
+               98:30,
+               99:24,
+               100:16,
+               101:32,
+               102:16,
+               103:32,
+               104:16,
+               105:48,
+               106:16,
+               107:64,
+               108:8,
+               109:69,
+               111:41,
+               113:45,
+               114:33,
+               115:32,
+               116:40,
+               117:24,
+               118:32,
+               119:9,
+               120:24,
+               121:8,
+               122:8,
+               123:21,
+               132:-13,
+               133:-11,
+               134:-5,
+               137:-3,
+               138:-10,
+               139:-13,
+               141:-5,
+               142:-28,
+               143:-23}
         keys = tab.keys()
         for key in keys:
             print(key)
@@ -1201,7 +1234,7 @@ def main():
     print(UP)
     ecart_bet = sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
     breakpoint()"""
-    #sql.arrangement_DB("XRPEUR")
+    sql.arrangement_DB("XRPEUR")
     #sql.set_ecart_bet("Etude-ETHUSDT_Carlos.csv")
     #sql.set_ajout("EURUSDT_seb_ajout.csv")
     #sql.set_ecart_bet("PEPEEUR_3.csv")
