@@ -41,6 +41,18 @@ class Clients():
                 print("# ID : " + str(order["orderId"]) + "\tSide : " + order["side"] + "\tLimite : " 
                       + str(order['price']) + "\tAmount : " + str(order['origQty']))
                 
+    def list_orders_for_dashboard(self,ID_client,symbol):
+        symbol_splited = symbol.split("_")[0]
+        orders = self.bin.clients[ID_client].get_all_orders(symbol=symbol_splited)
+        new_db_orders = self.sql.get_orders_status_symbol_filter("NEW",symbol,ID_client)
+        print("#########################################################################################")
+        for order in orders:
+            if order['status'] == "NEW" or order['status'] == "PARTIAL":
+                for ordre_db in new_db_orders:
+                    if order["orderId"] == ordre_db["ID"]:
+                        print("# ID : " + str(order["orderId"]) + "\tSide : " + order["side"] + "\tLimite : " 
+                            + str(order['price']) + "\tAmount : " + str(order['origQty']))
+                
     def cancel_order(self,ID_client,symbol):
         self.list_orders(ID_client,symbol)
         ID = input("Select the ID of order you whant to cancel : ")
@@ -49,6 +61,7 @@ class Clients():
     def dashboard_client(self,ID_client):
         wallet = self.bin.get_wallet(ID_client)
         devises = self.sql.get_symbols_actif_client(ID_client)
+        devises_info = self.sql.get_devises_from_Clien_ID(ID_client)
         print("\n#########################################################################################")
         print("#\t\t\t\t\tWallet\t\t\t\t\t\t#")
         print("#########################################################################################")
@@ -71,7 +84,18 @@ class Clients():
         for devise in devises:
             print("#########################################################################################")
             print("#\t\t\t\t\t"+ devise+ "\t\t\t\t\t#")
-            self.list_orders(ID_client,devise)
+            self.list_orders_for_dashboard(ID_client,devise)
+            print("#\t\t\tPERCENTS %\t\t")
+            print("# Down : " + str(devises_info[devise]["down"]) 
+                  + "\tLocal : " + str(devises_info[devise]["local"])
+                  + "\tUP : "+ str(devises_info[devise]["up"])
+                  + "\tEpargne : "+ str(devises_info[devise]["epargne_prcent"])
+                  + "\tFactu : "+ str(devises_info[devise]["factu_percent"]))
+            print("#\t\t\t\t\tRepartition\t\t\t\t\t#")
+            print("# Gain total : " + str('%.3f' % devises_info[devise]["benef_all"])
+                  + "\tEpargne : " + str('%.3f' % devises_info[devise]["epargne"])
+                  + "\tFacturation : " + str('%.3f' % devises_info[devise]["factu"])
+                  )
         print("#########################################################################################")
 
 

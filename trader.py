@@ -193,6 +193,7 @@ class Basics():
     def reinject_local(self,symbol,last_filled,qtt):
         current_bet = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,float(last_filled["ID_ecart"])-1)[3]
         self.sql.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+qtt/last_filled["limite"])
+        self.tele.send_message("add local ID : "+ str(int(last_filled["ID_ecart"])-1) +"\nqtt : " + str(qtt/last_filled["limite"]))
         self.sql.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,qtt/last_filled["limite"])
 
     def un_ordre_filled_autre_new(self,ordres_ouvert,symbol,ID_client):
@@ -272,9 +273,9 @@ def main():
     ################################################
     basic.tele.send_message("Bonjour 1")
     #for DEVISE in DEVISES:
-    basic.initialise("PEPEEUR_1",1)
-    basic.initialise("PEPEEUR_2",1)
-    basic.initialise("PEPEEUR_3",1)
+    #basic.initialise("PEPEEUR_1",1)
+    #basic.initialise("PEPEEUR_2",1)
+    #basic.initialise("PEPEEUR_3",1)
     #basic.initialise("ETHUSDT_Carlos",5)
     #basic.initialise("PEPEEUR_3")
     #    time.sleep(3)

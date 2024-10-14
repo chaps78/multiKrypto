@@ -449,6 +449,14 @@ class sqlAcces():
         for devise_SQL in devises_SQL:
             devises_ret[devise_SQL[8]].append(devise_SQL[0])
         return devises_ret
+    
+    def get_devises_from_Clien_ID(self,ID_client):
+        symbols = self.get_symbols_actif_client(ID_client)
+        devises_info = {}
+        for symbol in symbols:
+            devise = self.get_devises_from_symbol(symbol,ID_client)
+            devises_info[symbol] = devise
+        return devises_info
 
     def get_devises_from_symbol(self,symbol,ID_client):
         try:
@@ -1234,7 +1242,8 @@ def main():
     print(UP)
     ecart_bet = sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
     breakpoint()"""
-    sql.arrangement_DB("XRPEUR")
+    #sql.arrangement_DB("XRPEUR")
+    sql.get_devises_from_Clien_ID(1)
     #sql.set_ecart_bet("Etude-ETHUSDT_Carlos.csv")
     #sql.set_ajout("EURUSDT_seb_ajout.csv")
     #sql.set_ecart_bet("PEPEEUR_3.csv")
