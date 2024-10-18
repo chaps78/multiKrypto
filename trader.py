@@ -153,7 +153,9 @@ class Basics():
             ID-=1
         prix = float(self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID)[2])
         self.sql.add_to_ecart(symbol,ID,down/prix)
-        self.tele.send_message("Reinject down " +str(down/prix)+"\n ID "+str(ID))
+        self.tele.send_message("Reinject down " +str(down/prix)+"\n ID "+str(ID)
+                               +"\nqtt : "+ str(down)
+                               +"\nprix : " + str(prix))
         return ID
     
     def reinject_up(self,symbol,ID_client,qtt,last_filled):
@@ -192,9 +194,14 @@ class Basics():
 
     def reinject_local(self,symbol,last_filled,qtt):
         current_bet = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,float(last_filled["ID_ecart"])-1)[3]
-        self.sql.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+qtt/last_filled["limite"])
-        self.tele.send_message("add local ID : "+ str(int(last_filled["ID_ecart"])-1) +"\nqtt : " + str(qtt/last_filled["limite"]))
-        self.sql.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,qtt/last_filled["limite"])
+        prix = float(self.sql.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-1)[2])
+        self.sql.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+qtt/prix)
+        self.tele.send_message("add local ID : "+ str(int(last_filled["ID_ecart"])-1) 
+                               +"\nqtt : " 
+                               + str(qtt/prix) 
+                               +"\nqtt : "+ str(qtt)
+                               +"\nprix : " +str(prix))
+        self.sql.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,qtt/prix)
 
     def un_ordre_filled_autre_new(self,ordres_ouvert,symbol,ID_client):
         for ordre_ouvert in ordres_ouvert:
@@ -273,7 +280,7 @@ def main():
     ################################################
     basic.tele.send_message("Bonjour 1")
     #for DEVISE in DEVISES:
-    #basic.initialise("PEPEEUR_1",1)
+    #basic.initialise("EURUSDT_Seb2",3)
     #basic.initialise("PEPEEUR_2",1)
     #basic.initialise("PEPEEUR_3",1)
     #basic.initialise("ETHUSDT_Carlos",5)

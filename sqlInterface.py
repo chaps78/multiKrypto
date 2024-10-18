@@ -1,12 +1,13 @@
 import sqlite3
 from datetime import datetime, timezone
+import sys
 
 from telegramInterface import teleAcces
 
 
 class sqlAcces():
     def __init__(self):
-        self.con = sqlite3.connect("DB.db")
+        self.con = sqlite3.connect("/home/chaps78/binance/bascule/DB.db")
         self.cur = self.con.cursor()
         self.tele = teleAcces()
 
@@ -457,6 +458,21 @@ class sqlAcces():
             devise = self.get_devises_from_symbol(symbol,ID_client)
             devises_info[symbol] = devise
         return devises_info
+    
+    def get_ID_client_from_symbol(self,symbol):
+        try:
+            res = self.cur.execute("SELECT * FROM Devises WHERE symbol='"+str(symbol)+"'")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_ID_client_from_symbol_SQL",str(inst),symbol)
+            return inst
+        try:
+            devises = res.fetchall()[0]
+            retour = devises[8]
+
+        except:
+            return ""
+        return retour
 
     def get_devises_from_symbol(self,symbol,ID_client):
         try:
@@ -887,7 +903,6 @@ class sqlAcces():
 
     def get_gain_jour(self,symbol,annee,mois,jour):
         date = str(annee)+"-"+"%02.0f"%mois+"-"+"%02.0f"%jour
-        print(date)
         try:
             res = self.cur.execute("SELECT SUM(benefice) FROM Ordres WHERE symbol='"
                                    +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
@@ -896,7 +911,10 @@ class sqlAcces():
             return ""
         self.con.commit()
         ordres = res.fetchall()
-        return ordres[0][0]
+        if ordres[0][0] == None:
+            return 0.0
+        else:
+            return ordres[0][0]
     
     def get_gain_mois(self,symbol,annee,mois):
         date = str(annee)+"-"+"%02.0f"%mois
@@ -921,7 +939,6 @@ class sqlAcces():
         self.con.commit()
         ordres = res.fetchall()
         min_sell = ordres[0][0]
-        print("min sel: "+str(min_sell))
         return min_sell
     
     def max_sell(self,symbol,annee,mois):
@@ -1181,10 +1198,83 @@ class sqlAcces():
             current_value = 0.0
         self.set_up_tmp(symbol,current_value+float(qtt))
 
+    def configure_new_symbol(self,symbol,devise_1,devise_2,perc_down,perc_local,perc_up,ID_client,perc_factu,perc_epargne,dev_entiere,obj_gain):
+        try:
+            self.cur.execute("INSERT INTO Devises VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                             (symbol,
+                              devise_1,
+                              devise_2,
+                              perc_down,
+                              perc_local,
+                              perc_up,
+                              0.0,
+                              1,
+                              ID_client,
+                              0.0,
+                              0.0,
+                              perc_factu,
+                              0.0,
+                              0.0,
+                              perc_epargne,
+                              dev_entiere,
+                              obj_gain))
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("configure_new_symbol_SQL",str(inst),symbol)
+            return inst
+        retour = self.con.commit()
+        return retour
+    
+    def set_dashboard(self,symbol,date,capital_graph,instant_price,gain_day,epargne,factu,tmp):
+        try:
+            self.cur.execute("INSERT INTO Dashboard VALUES(?,?,?,?,?,?,?,?)",
+                             (symbol,date,capital_graph,instant_price,gain_day,epargne,factu,tmp))
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("set_dashboard_SQL",str(inst),symbol)
+            return inst
+        retour = self.con.commit()
+        return retour
+
+
+
 
 def main():
     sql = sqlAcces()
     DEVISE='EURUSDT_seb'
+    if len(sys.argv) == 2:
+        a = sys.argv[1]
+        if a == "init":
+            CSV_file = input("Quel est le nom du fichier CSV ? ")
+            symbol = input("Quel est le symbol? ")
+            percent_down = int(input("Quel est le pourcentage down? "))
+            percent_local = int(input("Quel est le pourcentage local? "))
+            percent_up = int(input("Quel est le pourcentage up? "))
+            percent_epargne = int(input("Quel est le pourcentage d'épargne? "))
+            percent_factu = int(input("Quel est le pourcentage facturation? "))
+
+            if (percent_down + percent_local + percent_up + percent_epargne + percent_factu) != 100:
+                print("La Somme des pourcentages doit être égal à 100")
+            else:
+                dev_entiere = int(input("la devise doit elle etre entiere ? (0/1) "))
+                obj_gain = float(input("Objectif gain ? "))
+                ID_client = int(input("Quel est l'ID du client ? "))
+                devise_1 = input("Devise 1 ? ")
+                devise_2 = input("Devise 2 ? ")
+                sql.configure_new_symbol(symbol,
+                                         devise_1,
+                                         devise_2,
+                                         percent_down,
+                                         percent_local,
+                                         percent_up,
+                                         ID_client,
+                                         percent_factu,
+                                         percent_epargne,
+                                         dev_entiere,
+                                         obj_gain)
+                sql.set_ecart_bet(CSV_file)
+
+            print("init")
+        else:
+            print("pas init")
     #sql.get_symbols_actif()
 
     #repart = sql.get_dev_entiere(DEVISE)
@@ -1243,10 +1333,10 @@ def main():
     ecart_bet = sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
     breakpoint()"""
     #sql.arrangement_DB("XRPEUR")
-    sql.get_devises_from_Clien_ID(1)
+    #sql.get_devises_from_Clien_ID(1)
     #sql.set_ecart_bet("Etude-ETHUSDT_Carlos.csv")
     #sql.set_ajout("EURUSDT_seb_ajout.csv")
-    #sql.set_ecart_bet("PEPEEUR_3.csv")
+    #sql.set_ecart_bet("EURUSDT_Seb2.csv")
     #sql.set_ajout("PEPEEUR_3_Ajout.csv")
     #toto = sql.get_ecart_bet_from_symbol("XRPEUR")
     #sql.ajout_up_bet("XRPEUR",15,4)

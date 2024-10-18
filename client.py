@@ -71,9 +71,12 @@ class Clients():
             print("# "+crypto["asset"]+ "\t: Free : "+ crypto["free"]+"\tlock : "+crypto["locked"]+ "\tTotal : "+str(total))
             if crypto["asset"] != "USDT":
                 taux = self.bin.get_price(crypto["asset"]+"USDT",ID_client)
-                US_price = total*float(taux["price"])
-                sum_usdt += US_price
-                print("#\t USDT : "+str(US_price))
+                try:
+                    US_price = total*float(taux["price"])
+                    sum_usdt += US_price
+                    print("#\t USDT : "+str(US_price))
+                except:
+                    print("#\tNO USDT Price ")
             else:
                 sum_usdt += total
         us_eur_taux = self.bin.get_price("EURUSDT",ID_client)

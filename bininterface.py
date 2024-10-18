@@ -48,7 +48,11 @@ class binAcces():
             elif symbol_plited == "ETHUSDT" or symbol_plited == "ETHEUR":
                 montant_tmp = int(montant * 10 ** 4)/10 ** 4
                 montant_call='%.4f' % montant_tmp
-            
+            elif symbol_plited == "EURUSDT":
+                montant_tmp = int(montant * 10 ** 1)/10 ** 1
+                montant_call='%.1f' % montant_tmp
+                limite = int(limite * 10 ** 4)/10 ** 4
+                limite = float('%.4f' % limite)
             
             response = self.clients[ID_client].create_order(symbol=symbol_plited, 
                                             side=sens, 
@@ -81,6 +85,11 @@ class binAcces():
             elif symbol_plited == "ETHUSDT" or symbol_plited == "ETHEUR":
                 montant_tmp = int(montant * 10 ** 4)/10 ** 4
                 montant_call='%.4f' % montant_tmp
+            elif symbol_plited == "EURUSDT":
+                montant_tmp = int(montant * 10 ** 1)/10 ** 1
+                montant_call='%.1f' % montant_tmp
+                limite = int(limite * 10 ** 4)/10 ** 4
+                limite = float('%.4f' % limite)
             
             
             response = self.clients[ID_client].create_order(symbol=symbol_plited, 
@@ -297,11 +306,8 @@ class binAcces():
         order_market = orders_info["MARKET"]
         order_partial = orders_info["PARTIAL"]
         benefice_sans_fee = abs(float(order_market["cummulativeQuoteQty"])-float(order_partial["cummulativeQuoteQty"]))
-        print("Benefice (sans fee) : "+str(benefice_sans_fee))
         current_fee = float(order_market["cummulativeQuoteQty"])*FEE + float(order_partial["cummulativeQuoteQty"])*FEE
-        print("FEE : "+ str(current_fee))
         benefice = benefice_sans_fee-current_fee
-        print("benefice reel : "+ str(benefice))
         self.sql.update_order_benef(str(order_partial["orderId"]),str(benefice),symbol)
 
 
@@ -313,7 +319,6 @@ class binAcces():
                 symbol = self.sql.get_order_info_by_ID(ID)["symbol"]
                 
             except:
-                print("L'ordre n'existe pas en base")
                 symbol = input("Rappel symbol SVP : ")
             symbol_split = symbol.split("_")[0]
             ordre = self.clients[ID_client].cancel_order(symbol=symbol_split,orderId=int(ID))
