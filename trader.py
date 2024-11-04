@@ -87,8 +87,16 @@ class Basics():
 
 
                     clients = self.sql.get_clients_infos()
-
-                    self.tele.send_message(str(last_filled["sens"])+" : "+symbol+"\n"+str(last_filled["montant_execute"])+"\nLimite : "+ str(last_filled["limite"]),clients[ID_client]["tele"])
+                    if last_filled["montant_execute"] != 0.0:
+                        self.tele.send_message(str(last_filled["sens"])+" : "
+                                            +symbol+"\n"+str(last_filled["montant_execute"])+"\nLimite : "
+                                            + str(last_filled["limite"]),clients[ID_client]["tele"])
+                    else:
+                        self.tele.send_message(str(last_filled["sens"])+" : "
+                                            +symbol+"\n"+str(last_filled["montant"])+"\nLimite : "
+                                            + str(last_filled["limite"]),clients[ID_client]["tele"])
+                        ordre = self.bin.get_order_info_with_ID(symbol,ID_client,0,0,last_filled["ID"])
+                        self.tele.send_message(str(ordre))
                     self.sql.new_log_debug("verification_2_ordres_V2","un ordre FILLED et un NEW : "+str(ordres_DB),symbol)
                     self.un_ordre_filled_autre_new(ordres_DB,symbol,ID_client)
                     self.sheet.update_all_info(symbol)
@@ -153,9 +161,9 @@ class Basics():
             ID-=1
         prix = float(self.sql.get_ecart_bet_from_symbol_and_ID(symbol,ID)[2])
         self.sql.add_to_ecart(symbol,ID,down/prix)
-        self.tele.send_message("Reinject down " +str(down/prix)+"\n ID "+str(ID)
-                               +"\nqtt : "+ str(down)
-                               +"\nprix : " + str(prix))
+        #self.tele.send_message("Reinject down " +str(down/prix)+"\n ID "+str(ID)
+        #                       +"\nqtt : "+ str(down)
+        #                       +"\nprix : " + str(prix))
         return ID
     
     def reinject_up(self,symbol,ID_client,qtt,last_filled):
@@ -196,11 +204,11 @@ class Basics():
         current_bet = self.sql.get_ecart_bet_from_symbol_and_ID(symbol,float(last_filled["ID_ecart"])-1)[3]
         prix = float(self.sql.get_ecart_bet_from_symbol_and_ID(symbol,int(last_filled["ID_ecart"])-1)[2])
         self.sql.update_bet_with_ID(symbol,int(last_filled["ID_ecart"])-1,float(current_bet)+qtt/prix)
-        self.tele.send_message("add local ID : "+ str(int(last_filled["ID_ecart"])-1) 
-                               +"\nqtt : " 
-                               + str(qtt/prix) 
-                               +"\nqtt : "+ str(qtt)
-                               +"\nprix : " +str(prix))
+        #self.tele.send_message("add local ID : "+ str(int(last_filled["ID_ecart"])-1) 
+        #                       +"\nqtt : " 
+        #                       + str(qtt/prix) 
+        #                       +"\nqtt : "+ str(qtt)
+        #                       +"\nprix : " +str(prix))
         self.sql.add_to_ajout(symbol,int(last_filled["ID_ecart"])-1,qtt/prix)
 
     def un_ordre_filled_autre_new(self,ordres_ouvert,symbol,ID_client):

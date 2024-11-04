@@ -1,4 +1,5 @@
 import time
+import sys
 
 from bininterface import binAcces
 from sqlInterface import sqlAcces
@@ -105,31 +106,45 @@ class Clients():
 def main():
     Client = Clients()
     clients_liste = Client.sql.get_clients_infos()
-    print("Select a client:")
-    for client in clients_liste:
-        print(str(client)+" - "+ str(clients_liste[client]["name"]))
-    client = int(input("Enter your choice : "))
-    print("\n\t#######################\n")
+    if len(sys.argv) == 2:
+        a = sys.argv[1]
+        if a == "new_client":
+            nom = input("Nom du client : ")
+            API_Key = input("API_Key : ")
+            secret = input("secret : ")
+            telegram = input("telegram chat ID : ")
+            base = input("Devise de base de l'utilisateur : ")
+            Client.sql.new_client(nom,API_Key,secret,base,telegram)
 
-    print("What action do you whant to do?")
-    print("1 - Display Wallet\n2 - Market order\n3 - Open orders list\n4 - New limit order\n5 - Cancel order\n6 - Dashboard")
-    action_selected = input("Enter your choice : ")
-    if action_selected == "1":
-        Client.display_wallet(client)
+        else:
+            print("argument non reconnu \n new_client")
+    else:
+            
+        print("Select a client:")
+        for client in clients_liste:
+            print(str(client)+" - "+ str(clients_liste[client]["name"]))
+        client = int(input("Enter your choice : "))
+        print("\n\t#######################\n")
 
-    elif action_selected == "2":
-        Client.market_order(client)
-    elif action_selected == "3":
-        symbol = input("Whith symbol : ")
-        Client.list_orders(client,symbol)
-    elif action_selected == "4":
-        Client.limit_order(client)
-    elif action_selected == "5":
-        symbol = input("Whith symbol : ")
-        Client.cancel_order(client,symbol)
-    elif action_selected == "6":
-        
-        Client.dashboard_client(client)
+        print("What action do you whant to do?")
+        print("1 - Display Wallet\n2 - Market order\n3 - Open orders list\n4 - New limit order\n5 - Cancel order\n6 - Dashboard")
+        action_selected = input("Enter your choice : ")
+        if action_selected == "1":
+            Client.display_wallet(client)
+
+        elif action_selected == "2":
+            Client.market_order(client)
+        elif action_selected == "3":
+            symbol = input("Whith symbol : ")
+            Client.list_orders(client,symbol)
+        elif action_selected == "4":
+            Client.limit_order(client)
+        elif action_selected == "5":
+            symbol = input("Whith symbol : ")
+            Client.cancel_order(client,symbol)
+        elif action_selected == "6":
+
+            Client.dashboard_client(client)
 
 
 

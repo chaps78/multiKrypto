@@ -287,7 +287,7 @@ class binAcces():
         self.sql.new_order(response["orderId"],symbol,montant,"",response["status"],datetime.now(timezone.utc),"",0,Client.ORDER_TYPE_MARKET,sens,0,0,ID_client)
         return response["orderId"]
     
-    def get_order_info_with_ID(self,symbol,ID_client,ID_partial,ID_market):
+    def get_order_info_with_ID(self,symbol,ID_client,ID_partial,ID_market,ID_limit):
         symbol_splited = symbol.split("_")[0]
         orders_Binance = self.clients[ID_client].get_all_orders(symbol=symbol_splited)
         retour = {}
@@ -296,13 +296,15 @@ class binAcces():
                 retour["PARTIAL"] = ob
             if ob["orderId"] == int(ID_market):
                 retour["MARKET"] = ob
+            if ob["orderId"] == int(ID_limit):
+                retour["FILLED"] = ob
 
         return retour
 
     
     def calcul_benef_partial(self,symbol,ID_client,ID_partial,ID_market):
         FEE=0.00075
-        orders_info = self.get_order_info_with_ID(symbol,ID_client,ID_partial,ID_market)
+        orders_info = self.get_order_info_with_ID(symbol,ID_client,ID_partial,ID_market,0)
         order_market = orders_info["MARKET"]
         order_partial = orders_info["PARTIAL"]
         benefice_sans_fee = abs(float(order_market["cummulativeQuoteQty"])-float(order_partial["cummulativeQuoteQty"]))

@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import sys
 
 from telegramInterface import teleAcces
@@ -504,6 +504,36 @@ class sqlAcces():
             return ""
         return(formated_devises)
     
+    def get_devises_from_symbol_real(self,symbol):
+        try:
+            res = self.cur.execute("SELECT * FROM Devises WHERE symbol='"+str(symbol)+"'")
+
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_devises_from_symbol_SQL",str(inst),symbol)
+            return inst
+        try:
+            devises = res.fetchall()[0]
+            formated_devises = {"devise1":devises[1],
+                                "devise2":devises[2],
+                                "down":devises[3],
+                                "local":devises[4],
+                                "up":devises[5],
+                                "epargne":devises[6],
+                                "actif":devises[7],
+                                "client":devises[8],
+                                "benef_all":devises[9],
+                                "benef_tmp":devises[10],
+                                "factu_percent":devises[11],
+                                "factu":devises[12],
+                                "UP_tmp":devises[13],
+                                "epargne_prcent":devises[14],
+                                "dev_entiere":devises[15],
+                                "obj_gain":devises[16]
+                                }
+        except:
+            return ""
+        return(formated_devises)
+    
     def get_max_ID_from_symbol(self,symbol):
         try:
             res = self.cur.execute("SELECT MAX(ID) FROM ecart_bet WHERE symbol='"+str(symbol)+"'")
@@ -905,7 +935,7 @@ class sqlAcces():
         date = str(annee)+"-"+"%02.0f"%mois+"-"+"%02.0f"%jour
         try:
             res = self.cur.execute("SELECT SUM(benefice) FROM Ordres WHERE symbol='"
-                                   +str(symbol)+"' AND date_debut LIKE '"+date+"%'")
+                                   +str(symbol)+"' AND date_fin LIKE '"+date+"%'")
         except sqlite3.IntegrityError as inst:
             self.new_log_error("get_gain_jour_SQL",str(inst),symbol)
             return ""
@@ -1095,49 +1125,15 @@ class sqlAcces():
         return benef
 
     def arrangement_DB(self,symbol):
-        tab = {88:8,
-               89:19,
-               90:15,
-               91:41,
-               92:36,
-               93:29,
-               94:39,
-               95:37,
-               96:31,
-               97:24,
-               98:30,
-               99:24,
-               100:16,
-               101:32,
-               102:16,
-               103:32,
-               104:16,
-               105:48,
-               106:16,
-               107:64,
-               108:8,
-               109:69,
-               111:41,
-               113:45,
-               114:33,
-               115:32,
-               116:40,
-               117:24,
-               118:32,
-               119:9,
-               120:24,
-               121:8,
-               122:8,
-               123:21,
-               132:-13,
-               133:-11,
-               134:-5,
-               137:-3,
-               138:-10,
-               139:-13,
-               141:-5,
-               142:-28,
-               143:-23}
+        tab = {121:8,
+               123:16,
+               125:22,
+               153:100,
+               155:100,
+               157:100,
+               159:100,
+               161:100,
+               163:100}
         keys = tab.keys()
         for key in keys:
             print(key)
@@ -1233,7 +1229,110 @@ class sqlAcces():
             return inst
         retour = self.con.commit()
         return retour
+    
+    def get_dashboard_infos(self,symbol,date):
+        try:
+            res = self.cur.execute("SELECT * FROM Dashboard WHERE symbol='"+symbol+"' AND Date LIKE '"+ str(date) +"%'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_dashboard_infos_SQL",str(inst),"NA")
+            return inst
+        self.con.commit()
+        try:
+            TMP = res.fetchall()[0]
+        except:
+            return None
+        retour = {}
+        retour["symbol"]        = TMP[0]
+        retour["date"]          = TMP[1]
+        retour["cap_graph"]     = TMP[2]
+        retour["instant_price"] = TMP[3]
+        retour["gain_day"]      = TMP[4]
+        retour["epargne"]       = TMP[5]
+        retour["factu"]         = TMP[6]
+        retour["up_TMP"]         = TMP[7]
+        return retour
 
+    def get_older_dashboard_infos(self,symbol):
+        try:
+            res = self.cur.execute("select * from Dashboard where symbol='"+symbol+"' AND Date=(select min(Date) from Dashboard where symbol='"+symbol+"')")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_dashboard_infos_SQL",str(inst),"NA")
+            return inst
+        self.con.commit()
+        try:
+            TMP = res.fetchall()[0]
+        except:
+            return None
+        retour = {}
+        retour["symbol"]        = TMP[0]
+        retour["date"]          = TMP[1]
+        retour["cap_graph"]     = TMP[2]
+        retour["instant_price"] = TMP[3]
+        retour["gain_day"]      = TMP[4]
+        retour["epargne"]       = TMP[5]
+        retour["factu"]         = TMP[6]
+        retour["up_TMP"]         = TMP[7]
+        return retour
+
+    def get_sum_dashboard_benef(self,symbol):
+        try:
+            res = self.cur.execute("SELECT SUM(gain_day) FROM Dashboard WHERE symbol='"+symbol+"'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_dashboard_infos_SQL",str(inst),"NA")
+            return inst
+        self.con.commit()
+        try:
+            TMP = res.fetchall()[0]
+        except:
+            return None
+        return TMP[0]
+    
+    def get_sum_7_days_dashboard_benef(self,symbol):
+        date_7 = datetime.now() - timedelta(days=7)
+        try:
+            res = self.cur.execute("SELECT SUM(gain_day) FROM Dashboard WHERE symbol='"
+                                   +symbol+"' and Date > '"+str(date_7.year)+"-"+str(date_7.month).zfill(2)
+                                   +"-"+str(date_7.day).zfill(2)+"'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_dashboard_infos_SQL",str(inst),"NA")
+            return inst
+        self.con.commit()
+        try:
+            TMP = res.fetchall()[0]
+        except:
+            return None
+        return TMP[0]
+    
+    def get_sum_30_days_dashboard_benef(self,symbol):
+        date_30 = datetime.now() - timedelta(days=30)
+        try:
+            res = self.cur.execute("SELECT SUM(gain_day) FROM Dashboard WHERE symbol='"
+                                   +symbol+"' and Date > '"+str(date_30.year)+"-"+str(date_30.month).zfill(2)
+                                   +"-"+str(date_30.day).zfill(2)+"'")
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("get_dashboard_infos_SQL",str(inst),"NA")
+            return inst
+        self.con.commit()
+        try:
+            TMP = res.fetchall()[0]
+        except:
+            return None
+        return TMP[0]
+    
+    def new_client(self,client_name,API_key,secret,devise_base,telegram_chat_ID=""):
+        if telegram_chat_ID == "":
+            telegram_chat_ID = "-4541800269"
+        try:
+            res = self.cur.execute("SELECT MAX(ID_client) FROM client")
+            self.con.commit()
+            MAX_ID = res.fetchall()[0][0]
+            self.cur.execute("INSERT INTO client VALUES(?,?,?,?,?,?)",
+                             (str(MAX_ID+1),client_name,str(API_key),str(secret),str(telegram_chat_ID),devise_base))
+        except sqlite3.IntegrityError as inst:
+            self.new_log_error("new_client_SQL",str(inst),"")
+            return inst
+        retour = self.con.commit()
+        return retour
 
 
 

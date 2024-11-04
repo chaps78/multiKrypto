@@ -128,6 +128,153 @@ class Kpi():
         tmp_up = devise["UP_tmp"]
         self.sql.set_dashboard(symbol,date,graph_capital,instant_price,day_gain,epargne,factu,tmp_up)
 
+    def get_dashboard_KPI(self,symbol):
+        devises = self.sql.get_devises_from_symbol_real(symbol)
+        date_0 = datetime.now()    
+        date_1 = datetime.now() - timedelta(days=1)
+        date_7 = datetime.now() - timedelta(days=7)
+        date_30 = datetime.now() - timedelta(days=30)
+                
+        dash_0 = self.sql.get_dashboard_infos(symbol,str(date_0.year)+"-"+"{0:0=2d}".format(date_0.month)+"-"+"{0:0=2d}".format(date_0.day))
+        dash_1 = self.sql.get_dashboard_infos(symbol,str(date_1.year)+"-"+"{0:0=2d}".format(date_1.month)+"-"+"{0:0=2d}".format(date_1.day))
+        dash_7 = self.sql.get_dashboard_infos(symbol,str(date_7.year)+"-"+"{0:0=2d}".format(date_7.month)+"-"+"{0:0=2d}".format(date_7.day))
+        dash_30 = self.sql.get_dashboard_infos(symbol,str(date_30.year)+"-"+"{0:0=2d}".format(date_30.month)+"-"+"{0:0=2d}".format(date_30.day))
+        dash_MAX = self.sql.get_older_dashboard_infos(symbol)
+        #print("\n" +symbol)
+        capital_portfolio = dash_0["cap_graph"] + dash_0["epargne"] + dash_0["factu"] + dash_0["up_TMP"]
+        #print("capital_portfolio : " + str(capital_portfolio))
+        e_b = self.sql.get_ecart_bet_from_symbol(symbol)
+        qtt_crypto_graph = 0.0
+        for el in e_b:
+            if e_b[el][0]>dash_0["instant_price"]:
+                qtt_crypto_graph += e_b[el][1]
+        #print("Capital crypto : " + str(qtt_crypto_graph*dash_0["instant_price"]))
+        percent_c = (qtt_crypto_graph*dash_0["instant_price"])/capital_portfolio
+        #print("Percent "+devises["devise1"]+" : " + str(percent_c*100))
+        #print("Percent "+devises["devise2"]+" : "+ str(100 - percent_c*100))
+        if dash_1 != None:
+            #print("24H")
+            ###Crypto ROI 24
+            capital_portfolio_1 = dash_1["cap_graph"] + dash_1["epargne"] + dash_1["factu"] + dash_1["up_TMP"]
+            ROI_24_Actif=100 * (capital_portfolio/capital_portfolio_1-1)
+            #print("ROI 24 Actif (%): " + str(ROI_24_Actif))
+            #print("ROI 24 Actif (FIDU): " + str(ROI_24_Actif*capital_portfolio_1/100))
+            ROI_24_Actif_FIDU = "{:.2f}".format(ROI_24_Actif*capital_portfolio_1/100)
+            #print("Gain BOT 24h : " + str(dash_0["gain_day"]))
+            gain_24 = "{:.2f}".format(dash_0["gain_day"])
+            pourcent_passif = dash_0["instant_price"]/dash_1["instant_price"]
+            #print("ROI 24 passif (%): " + str(100 * (pourcent_passif-1)))
+            ROI_24_passif = "{:.2f}".format(100 * (pourcent_passif-1))
+            #print("ROI 24 passif (FIDU): " + str(capital_portfolio_1 * (pourcent_passif-1)))
+            ROI_24_passif_FIDU = "{:.2f}".format(capital_portfolio_1 * (pourcent_passif-1))
+            ROI_24_Actif="{:.2f}".format(100 * (capital_portfolio/capital_portfolio_1-1))
+        else:
+            ROI_24_Actif = "NA"
+            ROI_24_Actif_FIDU = "NA"
+            gain_24 = "NA"
+            ROI_24_passif = "NA"
+            ROI_24_passif_FIDU = "NA"
+        if dash_7 != None:
+            ###Crypto ROI MAX
+            #print("7 Days")
+            capital_portfolio_7 = dash_7["cap_graph"] + dash_7["epargne"] + dash_7["factu"] + dash_7["up_TMP"]
+            ROI_7_Actif=100 * (capital_portfolio/capital_portfolio_7-1)
+            #print("ROI 7 Actif (%): " + str(ROI_7_Actif))
+            #print("ROI 7 Actif (FIDU): " + str(ROI_7_Actif*capital_portfolio_7/100))
+            ROI_7_Actif_FIDU = "{:.2f}".format(ROI_7_Actif*capital_portfolio_7/100)
+            gain_7 = "{:.2f}".format(self.sql.get_sum_7_days_dashboard_benef(symbol))
+            #print("Gain BOT 7 : " + str(gain_7))
+            pourcent_passif = dash_0["instant_price"]/dash_7["instant_price"]
+            #print("ROI 7 passif (%): " + str(100 * (pourcent_passif-1)))
+            ROI_7_passif = "{:.2f}".format(100 * (pourcent_passif-1))
+            #print("ROI 7 passif (FIDU): " + str(capital_portfolio_7 * (pourcent_passif-1)))
+            ROI_7_passif_FIDU = "{:.2f}".format(capital_portfolio_7 * (pourcent_passif-1))
+            ROI_7_Actif="{:.2f}".format(100 * (capital_portfolio/capital_portfolio_7-1))
+        else:
+            ROI_7_Actif = "NA"
+            ROI_7_Actif_FIDU = "NA"
+            gain_7 = "NA"
+            ROI_7_passif = "NA"
+            ROI_7_passif_FIDU = "NA"
+        if dash_30 != None:
+            ###Crypto ROI MAX
+            #print("30")
+            capital_portfolio_30 = dash_30["cap_graph"] + dash_30["epargne"] + dash_30["factu"] + dash_30["up_TMP"]
+            ROI_30_Actif=100 * (capital_portfolio/capital_portfolio_30-1)
+            #print("ROI 30 Actif (%): " + str(ROI_30_Actif))
+            #print("ROI 30 Actif (FIDU): " + str(ROI_30_Actif*capital_portfolio_30/100))
+            ROI_30_Actif_FIDU = "{:.2f}".format(ROI_30_Actif*capital_portfolio_30/100)
+            gain_30 = "{:.2f}".format(self.sql.get_sum_dashboard_benef(symbol))
+            #print("Gain BOT MAX : " + str(gain_30))
+            pourcent_passif = dash_0["instant_price"]/dash_30["instant_price"]
+            #print("ROI 30 passif (%): " + str(100 * (pourcent_passif-1)))
+            ROI_30_passif = "{:.2f}".format(100 * (pourcent_passif-1))
+            #print("ROI 30 passif (FIDU): " + str(capital_portfolio_30 * (pourcent_passif-1)))
+            ROI_30_passif_FIDU = "{:.2f}".format(capital_portfolio_30 * (pourcent_passif-1))
+            ROI_30_Actif="{:.2f}".format(100 * (capital_portfolio/capital_portfolio_30-1))
+        else:
+            ROI_30_Actif = "NA"
+            ROI_30_Actif_FIDU = "NA"
+            gain_30 = "NA"
+            ROI_30_passif = "NA"
+            ROI_30_passif_FIDU = "NA"
+        if dash_MAX != None:
+            ###Crypto ROI MAX
+            #print("MAX")
+            capital_portfolio_MAX = dash_MAX["cap_graph"] + dash_MAX["epargne"] + dash_MAX["factu"] + dash_MAX["up_TMP"]
+            ROI_MAX_Actif=100 * (capital_portfolio/capital_portfolio_MAX-1)
+            #print("ROI MAX Actif (%): " + str(ROI_MAX_Actif))
+            #print("ROI MAX Actif (FIDU): " + str(ROI_MAX_Actif*capital_portfolio_MAX/100))
+            ROI_MAX_Actif_FIDU = "{:.2f}".format(ROI_MAX_Actif*capital_portfolio_MAX/100)
+            gain_MAX = "{:.2f}".format(self.sql.get_sum_dashboard_benef(symbol))
+            #print("Gain BOT MAX : " + str(gain_MAX))
+            pourcent_passif = dash_0["instant_price"]/dash_MAX["instant_price"]
+            #print("ROI MAX passif (%): " + str(100 * (pourcent_passif-1)))
+            ROI_MAX_passif = "{:.2f}".format(100 * (pourcent_passif-1))
+            #print("ROI MAX passif (FIDU): " + str(capital_portfolio_MAX * (pourcent_passif-1)))
+            ROI_MAX_passif_FIDU = "{:.2f}".format(capital_portfolio_MAX * (pourcent_passif-1))
+            ROI_MAX_Actif="{:.2f}".format(100 * (capital_portfolio/capital_portfolio_MAX-1))
+        else:
+            ROI_MAX_Actif = "NA"
+            ROI_MAX_Actif_FIDU = "NA"
+            gain_MAX = "NA"
+            ROI_MAX_passif = "NA"
+            ROI_MAX_passif_FIDU = "NA"
+
+        #print("\n#################################################")
+        #print("#\t\t"+symbol+"\t\t\t#")
+        #print("#################################################")
+        #print("capital_portfolio : " + "{:.2f}".format(capital_portfolio))
+        #print("Percent "+devises["devise1"]+" : " + "{:.2f}".format(percent_c*100))
+        #print("Percent "+devises["devise2"]+" : "+ "{:.2f}".format(100 - percent_c*100))
+        #print("#################################################")
+        #print("\t\t| 24 H\t| 7 J\t| 30 J\t|   MAX\t#")
+        #print("ROI Actif (%)\t|" + ROI_24_Actif + "\t|" + ROI_7_Actif + "\t|" + ROI_30_Actif + "\t|" + ROI_MAX_Actif + "\t# ")
+        #print("ROI Actif "+devises["devise2"]+"\t|" + ROI_24_Actif_FIDU + "\t|" + ROI_7_Actif_FIDU + "\t|" + ROI_30_Actif_FIDU + "\t|" + ROI_MAX_Actif_FIDU + "\t# ")
+        #print("Gain BOT \t|"+gain_24+"\t|"+gain_7+"\t|"+gain_30+"\t|"+gain_MAX+"\t#")
+        #print("#################################################")
+        #print("ROI Passif (%)\t|" + ROI_24_passif + "\t|" + ROI_7_passif + "\t|" + ROI_30_passif + "\t|" + ROI_MAX_passif + "\t# ")
+        #print("ROI Passif "+devises["devise2"]+"\t|" + ROI_24_passif_FIDU + "\t|" + ROI_7_passif_FIDU + "\t|" + ROI_30_passif_FIDU + "\t|" + ROI_MAX_passif_FIDU + "\t# ")
+        #print("#################################################")
+
+        str_message = "#################################################"
+        str_message += "\n#\t\t"+symbol+"\t\t\t#"
+        str_message += "\n#################################################"
+        str_message += "\ncapital_portfolio : " + "{:.2f}".format(capital_portfolio)
+        str_message += "\nPercent "+devises["devise1"]+" : " + "{:.2f}".format(percent_c*100)
+        str_message += "\nPercent "+devises["devise2"]+" : "+ "{:.2f}".format(100 - percent_c*100)
+        str_message += "\n#################################################"
+        str_message += "\n\t\t\t\t\t                 | 24 H\t| 7 J\t| 30 J\t|   MAX\t#"
+        str_message += "\nROI Actif (%)\t  |" + ROI_24_Actif + "\t|" + ROI_7_Actif + "\t|" + ROI_30_Actif + "\t|" + ROI_MAX_Actif + "\t# "
+        str_message += "\nROI Actif "+devises["devise2"]+"\t|" + ROI_24_Actif_FIDU + "\t|" + ROI_7_Actif_FIDU + "\t|" + ROI_30_Actif_FIDU + "\t|" + ROI_MAX_Actif_FIDU + "\t# "
+        str_message += "\nGain BOT    \t   |"+gain_24+"\t|"+gain_7+"\t|"+gain_30+"\t|"+gain_MAX+"\t#"
+        str_message += "\n#################################################"
+        str_message += "\nROI Passif (%)\t   |" + ROI_24_passif + "\t|" + ROI_7_passif + "\t|" + ROI_30_passif + "\t|" + ROI_MAX_passif + "\t# "
+        str_message += "\nROI Passif "+devises["devise2"]+"\t|" + ROI_24_passif_FIDU + "\t|" + ROI_7_passif_FIDU + "\t|" + ROI_30_passif_FIDU + "\t|" + ROI_MAX_passif_FIDU + "\t# "
+        str_message += "\n#################################################"
+        clients = self.sql.get_clients_infos()
+        self.sql.tele.send_message(str_message,clients[devises["client"]]["tele"])
+
 
 
 ###########################################################################
@@ -147,6 +294,8 @@ def main():
         for ID_client in symbols:
             for symbol in symbols[ID_client]:
                 kpi.set_dashboard_info(symbol)
+                kpi.get_dashboard_KPI(symbol)
+
     else:
         print("Select a client:")
         clients_liste = sql.get_clients_infos()
@@ -175,7 +324,10 @@ def main():
             choice2 = input("?")
 
             print("\n"+str(symbols[int(choice2)])+":\n")
-            kpi.stat_mois(symbols[int(choice2)],2024,mois)
+            current_month = datetime.now().month
+
+            back_month = input("combien de mois en arrière ? : ")
+            kpi.stat_mois(symbols[int(choice2)],2024,current_month-int(back_month))
 
 
 if __name__ == '__main__':
