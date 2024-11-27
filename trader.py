@@ -1,10 +1,12 @@
 import time
+from datetime import datetime, timezone, timedelta
 
 from bininterface import binAcces
 from sqlInterface import sqlAcces
 from KPI import Kpi
 from telegramInterface import teleAcces
 from sheetInterface import sheetAcces
+from edyn import Edyn
 
 
 
@@ -16,6 +18,7 @@ class Basics():
         self.kpi = Kpi()
         self.tele = teleAcces()
         self.sheet = sheetAcces()
+        self.edyn = Edyn()
 
     def plus_proche(self,symbol,ID_client):
         ecart_bet_dic = self.sql.get_ecart_bet_from_symbol(symbol)
@@ -136,7 +139,8 @@ class Basics():
                 debug_flag = 6
                 self.reinject_local(symbol,last_filled,local)
                 debug_flag = 7
-                self.reinject_down(symbol,ID_client,down,last_filled)
+                if down>0:
+                    self.reinject_down(symbol,ID_client,down,last_filled)
                 debug_flag = 8
                 self.sql.ajout_epargne_paire_devise(symbol,epargne,ID_client)
                 debug_flag = 9
@@ -288,20 +292,28 @@ def main():
     ################################################
     basic.tele.send_message("Bonjour 1")
     #for DEVISE in DEVISES:
-    #basic.initialise("EURUSDT_Seb2",3)
+    basic.initialise("EURUSDT_Seb3",3)
     #basic.initialise("PEPEEUR_2",1)
     #basic.initialise("PEPEEUR_3",1)
     #basic.initialise("ETHUSDT_Carlos",5)
     #basic.initialise("PEPEEUR_3")
     #    time.sleep(3)
+    start_edyn = datetime.now(timezone.utc)
     while True:
         users_IDs=DEVISES.keys()
-        for user_ID in users_IDs:
-            for DEVISE in DEVISES[user_ID]:
-                basic.verification_2_ordres_V2(DEVISE,user_ID)
-    
-                basic.verification_niveau_VS_timer(DEVISE,user_ID)
-                time.sleep(4)
+        now = datetime.now(timezone.utc)
+        if (now-start_edyn).total_seconds()>3600*5:
+            basic.tele.send_message("Edyn exec pour multi compte")
+            basic.edyn.exec_edyn()
+            start_edyn = datetime.now(timezone.utc)
+        else:
+            for user_ID in users_IDs:
+            
+                for DEVISE in DEVISES[user_ID]:
+                    basic.verification_2_ordres_V2(DEVISE,user_ID)
+
+                    basic.verification_niveau_VS_timer(DEVISE,user_ID)
+                    time.sleep(4)
     #last_field = basic.sql.get_last_filled("XRPEUR",1)
     #print(last_field)
     #print("OUIII")

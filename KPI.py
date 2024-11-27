@@ -260,7 +260,7 @@ class Kpi():
         str_message = "#################################################"
         str_message += "\n#\t\t"+symbol+"\t\t\t#"
         str_message += "\n#################################################"
-        str_message += "\ncapital_portfolio : " + "{:.2f}".format(capital_portfolio)
+        #str_message += "\ncapital_portfolio : " + "{:.2f}".format(capital_portfolio)
         str_message += "\nPercent "+devises["devise1"]+" : " + "{:.2f}".format(percent_c*100)
         str_message += "\nPercent "+devises["devise2"]+" : "+ "{:.2f}".format(100 - percent_c*100)
         str_message += "\n#################################################"
@@ -274,6 +274,60 @@ class Kpi():
         str_message += "\n#################################################"
         clients = self.sql.get_clients_infos()
         self.sql.tele.send_message(str_message,clients[devises["client"]]["tele"])
+
+    def new_dashboard(self,symbol,ID_client):
+        str_message = "#################################################"
+        str_message += "\n#\t\t Hello Jeff\t\t\t#"
+        str_message += "\n#################################################"
+        #Attention ID spécifique à Jeff à changer par la suite
+        wallet = self.bin.get_wallet(6)
+        sum_usdt = 0.0
+        for crypto in wallet:
+            total = float(crypto["free"])+float(crypto["locked"])
+            print("# "+crypto["asset"]+ "\t: Free : "+ crypto["free"]+"\tlock : "+crypto["locked"]+ "\tTotal : "+str(total))
+            if crypto["asset"] != "USDT":
+                taux = self.bin.get_price(crypto["asset"]+"USDT",ID_client)
+                try:
+                    US_price = total*float(taux["price"])
+                    sum_usdt += US_price
+                    print("#\t USDT : "+str(US_price))
+                except:
+                    print("#\tNO USDT Price ")
+            else:
+                sum_usdt += total
+        us_eur_taux = self.bin.get_price("EURUSDT",ID_client)
+        sum_eur = sum_usdt/float(us_eur_taux["price"])
+        str_message += "\ninitial capital (25/11/2024)" +str(5160)
+        str_message +="\nCurrent capital in USDT : "+str(sum_usdt)
+        str_message +="\ncurrent capital in EUR : "+str(sum_eur)
+        dash_MAX = self.sql.get_older_dashboard_infos(symbol)
+        if dash_MAX != None:
+            ###Crypto ROI MAX
+            #print("MAX")
+            date_0 = datetime.now()
+            dash_0 = self.sql.get_dashboard_infos(symbol,str(date_0.year)+"-"+"{0:0=2d}".format(date_0.month)+"-"+"{0:0=2d}".format(date_0.day))
+            capital_portfolio = dash_0["cap_graph"] + dash_0["epargne"] + dash_0["factu"] + dash_0["up_TMP"]
+            capital_portfolio_MAX = dash_MAX["cap_graph"] + dash_MAX["epargne"] + dash_MAX["factu"] + dash_MAX["up_TMP"]
+            ROI_MAX_Actif=100 * (capital_portfolio/capital_portfolio_MAX-1)
+            #print("ROI MAX Actif (%): " + str(ROI_MAX_Actif))
+            #print("ROI MAX Actif (FIDU): " + str(ROI_MAX_Actif*capital_portfolio_MAX/100))
+            ROI_MAX_Actif_FIDU = "{:.2f}".format(ROI_MAX_Actif*capital_portfolio_MAX/100)
+            gain_MAX = "{:.2f}".format(self.sql.get_sum_dashboard_benef(symbol))
+            #print("Gain BOT MAX : " + str(gain_MAX))
+            pourcent_passif = dash_0["instant_price"]/dash_MAX["instant_price"]
+            #print("ROI MAX passif (%): " + str(100 * (pourcent_passif-1)))
+            ROI_MAX_passif = "{:.2f}".format(100 * (pourcent_passif-1))
+            #print("ROI MAX passif (FIDU): " + str(capital_portfolio_MAX * (pourcent_passif-1)))
+            ROI_MAX_passif_FIDU = "{:.2f}".format(capital_portfolio_MAX * (pourcent_passif-1))
+            ROI_MAX_Actif="{:.2f}".format(100 * (capital_portfolio/capital_portfolio_MAX-1))
+            str_message +="\nRealized gains: " + str(ROI_MAX_Actif)
+            str_message +="\nFloating gains: " + str(ROI_MAX_passif_FIDU)
+            str_message +="\nGain generate by the Grid: " + str(gain_MAX)
+        clients = self.sql.get_clients_infos()
+        devises = self.sql.get_devises_from_symbol_real("BTCEUR_JF_2")
+        self.sql.tele.send_message(str_message,clients[devises["client"]]["tele"])
+
+
 
 
 
@@ -295,6 +349,16 @@ def main():
             for symbol in symbols[ID_client]:
                 kpi.set_dashboard_info(symbol)
                 kpi.get_dashboard_KPI(symbol)
+                if symbol == "BTCEUR_JF_2":
+                    kpi.new_dashboard(symbol,6)
+
+    if a == "jeff":
+        symbols = kpi.sql.get_symbols_actif()
+        for ID_client in symbols:
+            for symbol in symbols[ID_client]:
+                if symbol == "BTCEUR_JF_2":
+                    print("On passe bien par ici")
+                    kpi.new_dashboard(symbol,6)
 
     else:
         print("Select a client:")

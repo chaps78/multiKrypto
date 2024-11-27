@@ -7,7 +7,8 @@ from telegramInterface import teleAcces
 
 class sqlAcces():
     def __init__(self):
-        self.con = sqlite3.connect("/home/chaps78/binance/bascule/DB.db")
+        #self.con = sqlite3.connect("/home/chaps78/binance/bascule/DB.db")
+        self.con = sqlite3.connect("DB.db")
         self.cur = self.con.cursor()
         self.tele = teleAcces()
 
@@ -1194,9 +1195,9 @@ class sqlAcces():
             current_value = 0.0
         self.set_up_tmp(symbol,current_value+float(qtt))
 
-    def configure_new_symbol(self,symbol,devise_1,devise_2,perc_down,perc_local,perc_up,ID_client,perc_factu,perc_epargne,dev_entiere,obj_gain):
+    def configure_new_symbol(self,symbol,devise_1,devise_2,perc_down,perc_local,perc_up,ID_client,perc_factu,perc_epargne,dev_entiere,obj_gain,edyn):
         try:
-            self.cur.execute("INSERT INTO Devises VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            self.cur.execute("INSERT INTO Devises VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                              (symbol,
                               devise_1,
                               devise_2,
@@ -1213,7 +1214,8 @@ class sqlAcces():
                               0.0,
                               perc_epargne,
                               dev_entiere,
-                              obj_gain))
+                              obj_gain,
+                              edyn))
         except sqlite3.IntegrityError as inst:
             self.new_log_error("configure_new_symbol_SQL",str(inst),symbol)
             return inst
@@ -1358,6 +1360,7 @@ def main():
                 ID_client = int(input("Quel est l'ID du client ? "))
                 devise_1 = input("Devise 1 ? ")
                 devise_2 = input("Devise 2 ? ")
+                edyn = input("Edyn ? ")
                 sql.configure_new_symbol(symbol,
                                          devise_1,
                                          devise_2,
@@ -1368,10 +1371,14 @@ def main():
                                          percent_factu,
                                          percent_epargne,
                                          dev_entiere,
-                                         obj_gain)
+                                         obj_gain,
+                                         edyn)
                 sql.set_ecart_bet(CSV_file)
 
             print("init")
+        elif a == "load_file":
+            CSV_file = input("Quel est le nom du fichier CSV ? ")
+            sql.set_ecart_bet(CSV_file)
         else:
             print("pas init")
     #sql.get_symbols_actif()

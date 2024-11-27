@@ -16,7 +16,7 @@ class binAcces():
         for key in clients_infos.keys():
             self.clients[key]=Client(clients_infos[key]["api"], clients_infos[key]["secret"])
 
-    def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,ID_client,niveau=1):
+    def new_limite_order(self,symbol,montant,limite,sens,ID_ecart,flag_ajout,ID_client,niveau=1,edyn=0):
         try:
             UP = 0
             if sens == self.client.SIDE_BUY and (niveau==1 or niveau == 2):
@@ -31,7 +31,7 @@ class binAcces():
             ajout_qtt = infos_devise["local"]
             benef = self.sql.calcul_benef_with_ID(symbol,ID_ecart,limite,montant)
             benef_ratio = benef/limite
-            if sens == self.client.SIDE_SELL and (niveau==1 or niveau == 2) and benef_ratio < ajout_qtt and symbol=="XRPEUR":
+            if sens == self.client.SIDE_SELL and (niveau==1 or niveau == 2) and benef_ratio < ajout_qtt and symbol=="XRPEUR" and edyn == 0:
                 montant += ajout_qtt
 
             if self.sql.get_dev_entiere(symbol):
@@ -53,7 +53,6 @@ class binAcces():
                 montant_call='%.1f' % montant_tmp
                 limite = int(limite * 10 ** 4)/10 ** 4
                 limite = float('%.4f' % limite)
-            
             response = self.clients[ID_client].create_order(symbol=symbol_plited, 
                                             side=sens, 
                                             type=Client.ORDER_TYPE_LIMIT, 
