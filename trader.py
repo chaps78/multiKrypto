@@ -292,8 +292,8 @@ def main():
     ################################################
     basic.tele.send_message("Bonjour 1")
     #for DEVISE in DEVISES:
-    basic.initialise("EURUSDT_Seb3",3)
-    #basic.initialise("PEPEEUR_2",1)
+    #basic.initialise("BTCEUR_JF_2",6)
+    #basic.initialise("PEPEEUR_4",1)
     #basic.initialise("PEPEEUR_3",1)
     #basic.initialise("ETHUSDT_Carlos",5)
     #basic.initialise("PEPEEUR_3")
@@ -302,7 +302,8 @@ def main():
     while True:
         users_IDs=DEVISES.keys()
         now = datetime.now(timezone.utc)
-        if (now-start_edyn).total_seconds()>3600*5:
+        #if (now-start_edyn).total_seconds()>3600*12:
+        if False:
             basic.tele.send_message("Edyn exec pour multi compte")
             basic.edyn.exec_edyn()
             start_edyn = datetime.now(timezone.utc)

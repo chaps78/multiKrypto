@@ -36,7 +36,6 @@ class binAcces():
 
             if self.sql.get_dev_entiere(symbol):
                 montant = int(montant)
-
             symbol_plited = symbol.split("_")[0]
             montant_call='%.8f' % montant
             if symbol_plited == "PEPEEUR":

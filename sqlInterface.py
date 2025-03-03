@@ -7,8 +7,8 @@ from telegramInterface import teleAcces
 
 class sqlAcces():
     def __init__(self):
-        #self.con = sqlite3.connect("/home/chaps78/binance/bascule/DB.db")
-        self.con = sqlite3.connect("DB.db")
+        self.con = sqlite3.connect("/home/chaps/binance/bascule/DB.db")
+        #self.con = sqlite3.connect("DB.db")
         self.cur = self.con.cursor()
         self.tele = teleAcces()
 
@@ -1126,15 +1126,89 @@ class sqlAcces():
         return benef
 
     def arrangement_DB(self,symbol):
-        tab = {121:8,
-               123:16,
-               125:22,
-               153:100,
-               155:100,
-               157:100,
-               159:100,
-               161:100,
-               163:100}
+        tab = {0:13,
+               3:1,
+               6:5,
+               7:2,
+               8:2,
+               9:7,
+               10:2,
+               11:2,
+               12:8,
+               13:2,
+               14:5,
+               15:8,
+               16:2,
+               17:8,
+               18:6,
+               19:11,
+               20:6,
+               21:6,
+               22:8,
+               23:8,
+               24:5,
+               25:6,
+               26:4,
+               27:1,
+               28:1,
+               29:1,
+               30:1,
+               31:3,
+               32:2,
+               33:2,
+               34:-2,
+               35:-1,
+               36:-6,
+               37:-7,
+               39:4,
+               40:-1,
+               41:-9,
+               42:-3,
+               43:-1,
+               45:-2,
+               46:-2,
+               48:-2,
+               49:-19,
+               50:-16,
+               51:-4,
+               52:-25,
+               53:-11,
+               54:2,
+               55:4,
+               56:5,
+               57:17,
+               58:11,
+               59:8,
+               60:10,
+               61:9,
+               62:9,
+               63:14,
+               64:5,
+               65:-2,
+               66:1,
+               67:-3,
+               68:19,
+               69:9,
+               70:2,
+               71:-6,
+               72:-6,
+               73:4,
+               74:5,
+               75:1,
+               76:3,
+               77:1,
+               78:4,
+               79:-15,
+               80:-6,
+               81:8,
+               82:14,
+               83:31,
+               84:21,
+               85:-5,
+               86:-11,
+               87:-23,
+               88:-51,
+               89:-20}
         keys = tab.keys()
         for key in keys:
             print(key)
@@ -1438,7 +1512,7 @@ def main():
     print(UP)
     ecart_bet = sql.get_ecart_bet_from_symbol_and_ID("DOGEEUR",41)
     breakpoint()"""
-    #sql.arrangement_DB("XRPEUR")
+    sql.arrangement_DB("XRPEUR_EDYN")
     #sql.get_devises_from_Clien_ID(1)
     #sql.set_ecart_bet("Etude-ETHUSDT_Carlos.csv")
     #sql.set_ajout("EURUSDT_seb_ajout.csv")

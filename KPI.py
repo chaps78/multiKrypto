@@ -273,34 +273,46 @@ class Kpi():
         str_message += "\nROI Passif "+devises["devise2"]+"\t|" + ROI_24_passif_FIDU + "\t|" + ROI_7_passif_FIDU + "\t|" + ROI_30_passif_FIDU + "\t|" + ROI_MAX_passif_FIDU + "\t# "
         str_message += "\n#################################################"
         clients = self.sql.get_clients_infos()
-        self.sql.tele.send_message(str_message,clients[devises["client"]]["tele"])
+        if symbol != "BTCEUR_JF_2":
+            self.sql.tele.send_message(str_message,clients[devises["client"]]["tele"])
 
     def new_dashboard(self,symbol,ID_client):
-        str_message = "#################################################"
+        str_message = "###########"
         str_message += "\n#\t\t Hello Jeff\t\t\t#"
-        str_message += "\n#################################################"
+        str_message += "\n###########"
         #Attention ID spécifique à Jeff à changer par la suite
         wallet = self.bin.get_wallet(6)
-        sum_usdt = 0.0
+        sum_eur = 0.0
         for crypto in wallet:
             total = float(crypto["free"])+float(crypto["locked"])
             print("# "+crypto["asset"]+ "\t: Free : "+ crypto["free"]+"\tlock : "+crypto["locked"]+ "\tTotal : "+str(total))
-            if crypto["asset"] != "USDT":
-                taux = self.bin.get_price(crypto["asset"]+"USDT",ID_client)
+            if crypto["asset"] != "EUR":
+                taux = self.bin.get_price(crypto["asset"]+"EUR",ID_client)
                 try:
                     US_price = total*float(taux["price"])
-                    sum_usdt += US_price
-                    print("#\t USDT : "+str(US_price))
+                    sum_eur += US_price
+                    print("#\t EUR : "+str(US_price))
                 except:
-                    print("#\tNO USDT Price ")
+                    print("#\tNO EUR Price ")
             else:
-                sum_usdt += total
-        us_eur_taux = self.bin.get_price("EURUSDT",ID_client)
-        sum_eur = sum_usdt/float(us_eur_taux["price"])
-        str_message += "\ninitial capital (25/11/2024)" +str(5160)
-        str_message +="\nCurrent capital in USDT : "+str(sum_usdt)
-        str_message +="\ncurrent capital in EUR : "+str(sum_eur)
+                sum_eur += total
+        #us_eur_taux = self.bin.get_price("EURUSDT",ID_client)
+        #sum_eur = sum_usdt/float(us_eur_taux["price"])
+        init_capital = 5111
+        init_price = 90300
+        BTC_init = init_capital/init_price
+        btc_eur_taux = self.bin.get_price("BTCEUR",ID_client)
+        floating = BTC_init*float(btc_eur_taux["price"])
+        str_message += "\ninitial capital (28/11/2024) EUR : " +str(init_capital)
+        #str_message +="\nCurrent capital in USDT : "+str(sum_usdt)
+        str_message +="\ncurrent capital in EUR : "+str(int(sum_eur))
+        ROI_Actif_percent = ((sum_eur-init_capital)/init_capital)*100
+        str_message +="\nROI actif (EUR): " + str(int(sum_eur-init_capital)) + " ("+str(round(ROI_Actif_percent,2))+"%)"
+        str_message +="\nfloating in EUR : "+ str(int(floating))
+        ROI_flotant_percent = ((floating-init_capital)/init_capital)*100
+        str_message +="\nROI floating (EUR): " + str(int(floating-init_capital)) + " ("+str(round(ROI_flotant_percent,2))+"%)"
         dash_MAX = self.sql.get_older_dashboard_infos(symbol)
+        """
         if dash_MAX != None:
             ###Crypto ROI MAX
             #print("MAX")
@@ -323,6 +335,7 @@ class Kpi():
             str_message +="\nRealized gains: " + str(ROI_MAX_Actif)
             str_message +="\nFloating gains: " + str(ROI_MAX_passif_FIDU)
             str_message +="\nGain generate by the Grid: " + str(gain_MAX)
+        """
         clients = self.sql.get_clients_infos()
         devises = self.sql.get_devises_from_symbol_real("BTCEUR_JF_2")
         self.sql.tele.send_message(str_message,clients[devises["client"]]["tele"])

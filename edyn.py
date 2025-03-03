@@ -36,7 +36,7 @@ class Edyn():
         if symbol == "EURUSDT_Seb3":
             nbr_dilat = 4
         else:
-            nbr_dilat = 10
+            nbr_dilat = 6
         base_tmp = copy.deepcopy(base)
         #base_tmp={}
 
@@ -68,6 +68,11 @@ class Edyn():
             delta = base[eid+nbr_dilat+count+1]["limite"] - base[eid+nbr_dilat+count]["limite"]
             base_tmp[eid+nbr_dilat+count+1]["limite"]=base_tmp[eid+nbr_dilat+count]["limite"] + delta + delta_haut/nbr_dilat
             #bas
+            print("symbol : " + symbol)
+            print(str(eid-nbr_dilat-count))
+            print(str(eid-nbr_dilat-count-1))
+            print("nbr_dilat : " + str(nbr_dilat))
+            print("count : " +str(count))
             delta = base[eid-nbr_dilat-count]["limite"] - base[eid-nbr_dilat-count-1]["limite"]
             base_tmp[eid-nbr_dilat-count-1]["limite"]=base_tmp[eid-nbr_dilat-count]["limite"] - delta - delta_bas/nbr_dilat
             count+=1
@@ -123,11 +128,15 @@ class Edyn():
             if symbol_plited == "BTCEUR":
                 limite_tmp = int(new_grid[el]["limite"] * 10 ** 2)/10 ** 2
                 limite = float('%.4f' % limite_tmp)
+            if symbol_plited == "EURUSDT":
+                limite_tmp = int(new_grid[el]["limite"] * 10 ** 4)/10 ** 4
+                limite = float('%.4f' % limite_tmp)
             self.cur.execute("UPDATE ecart_bet SET prix="+str(limite)+" WHERE ID="+str(el)+" AND symbol='"+symbol+"'")
             self.con.commit()
 
     def update_e_dyn(self,DEVISE,client):
-        last_field_ID = self.sql.get_last_filled(DEVISE,client)["ID_ecart"]
+        tmp_last_field = self.sql.get_last_filled(DEVISE,client)
+        last_field_ID = tmp_last_field["ID_ecart"]
         self.ajout_poid(DEVISE,last_field_ID)
         base = self.get_base(DEVISE)
         poids = self.get_poids(DEVISE)
